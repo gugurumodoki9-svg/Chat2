@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+
+<style id="webmakerstyle">
+
+</style>
+</head>
+<body>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Super Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { 
+      --primary: #0084ff; --bg: #f0f2f5; --side-width: 300px; 
+      --danger: #ff4d4f; --success: #28a745; --active-chat: #e7f3ff;
+      --msg-me: #dcf8c6; --msg-other: #ffffff;
+    }
+    * { font-family: 'Noto Sans JP', sans-serif !important; box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); height: 100vh; overflow: hidden; display: flex; }
+
+    #login-screen {
+      position: fixed; inset: 0; background: linear-gradient(135deg, #0084ff 0%, #00c6ff 100%);
+      display: flex; align-items: center; justify-content: center; z-index: 10000;
+    }
+    .login-card {
+      background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      text-align: center; width: 90%; max-width: 400px;
+    }
+    .login-btn {
+      background: white; color: #444; border: 1px solid #ddd; padding: 12px 24px;
+      border-radius: 30px; font-weight: bold; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 10px; width: 100%; font-size: 16px; transition: 0.2s;
+    }
+    .login-btn:hover { background: #f8f9fa; transform: translateY(-2px); }
+
+    #main-app { display: none; width: 100%; height: 100vh; }
+
+    .sidebar { width: var(--side-width); background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; z-index: 10; }
+    .sidebar-header { padding: 15px; border-bottom: 1px solid #eee; background: #f8f9fa; }
+    .user-list { flex: 1; overflow-y: auto; }
+    .user-item { 
+      padding: 12px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px; 
+      border-bottom: 1px solid #f9f9f9; transition: 0.2s; border-left: 5px solid transparent;
+      position: relative;
+    }
+    .user-item.active { background: var(--active-chat) !important; color: var(--primary) !important; font-weight: bold; border-left: 5px solid var(--primary); }
+    .user-icon { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; background: #ddd; }
+
+    /* 未読バッジ */
+    .unread-badge {
+      margin-left: auto; background: var(--danger); color: white; border-radius: 50%;
+      min-width: 20px; height: 20px; font-size: 11px; font-weight: bold;
+      display: flex; align-items: center; justify-content: center; padding: 0 4px;
+      flex-shrink: 0;
+    }
+
+    .chat-area { flex: 1; display: flex; flex-direction: column; background-color: #e5ddd5; background-size: cover; background-position: center; position: relative; }
+    #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; } 
+    .msg-container { display: flex; flex-direction: column; width: 100%; }
+    .msg-wrapper { max-width: 75%; padding: 10px 14px; border-radius: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer; position: relative; }
+    .my-wrapper { background: var(--msg-me); align-self: flex-end; border-bottom-right-radius: 2px; }
+    .other-wrapper { background: var(--msg-other); align-self: flex-start; border-bottom-left-radius: 2px; }
+    .msg-info-inner { display: flex; justify-content: space-between; font-size: 10px; color: #888; margin-bottom: 4px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+
+    .btn-modern { border: none; padding: 8px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .full-panel { position: fixed; inset: 0; background: #f0f2f5; z-index: 9999; display: none; flex-direction: column; }
+    .panel-header { padding: 15px; background: white; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; align-items: center; }
+    .panel-content { flex: 1; overflow-y: auto; padding: 20px; }
+    .card { background: white; padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    #action-menu { position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%); background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); display: none; gap: 10px; padding: 12px 20px; z-index: 10002; }
+    .locked { pointer-events: none; opacity: 0.5; filter: grayscale(1); }
+
+    /* 通知許可バナー */
+    #notif-banner {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #222; color: white; padding: 12px 20px; border-radius: 30px;
+      font-size: 13px; z-index: 99998; display: none; align-items: center; gap: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3); white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 通知許可バナー -->
+  <div id="notif-banner">
+    🔔 メッセージ通知を受け取りますか？
+    <button onclick="requestNotifPermission()" class="btn-modern btn-primary">許可する</button>
+    <button onclick="document.getElementById('notif-banner').style.display='none'" class="btn-modern" style="background:#555;color:white;">閉じる</button>
+  </div>
+
+  <div id="login-screen">
+    <div class="login-card">
+      <h1 style="margin-top:0; color:#333;">Super Chat</h1>
+      <p style="color:#666; margin-bottom:30px;">自分たちだけの安全なチャットルーム</p>
+      <button onclick="loginWithGoogle()" class="login-btn">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="18">
+        Googleでログイン
+      </button>
+    </div>
+  </div>
+
+  <div id="main-app">
+    <div id="action-menu">
+      <button id="act-reply" class="btn-modern btn-primary">↩️ 返信</button>
+      <button id="act-report" class="btn-modern btn-danger">🚨 通報/削除</button>
+      <button onclick="hideActionMenu()" class="btn-modern">✕</button>
+    </div>
+
+    <div class="sidebar" style="display:flex;">
+      <div class="sidebar-header">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <img id="my-icon" class="user-icon" src="">
+          <div id="my-name" style="font-weight:bold;">Loading...</div>
+        </div>
+        <div style="display:flex; gap:5px; flex-wrap: wrap;">
+          <button onclick="openPanel('news-panel')" class="btn-modern btn-primary" style="flex:1;">✉️ 通知</button>
+          <button onclick="openPanel('settings-panel')" class="btn-modern" style="flex:1; background:#eee;">⚙️ 設定</button>
+          <button id="admin-btn" onclick="openPanel('admin-panel')" class="btn-modern btn-danger" style="display:none; flex:1;">🛠️ 管理</button>
+        </div>
+        <div id="admin-login-area" style="margin-top:10px; display:flex; gap:5px;">
+          <input type="password" id="admin-pass" placeholder="Admin Pass" style="width:60%; border-radius:10px; border:1px solid #ddd; padding:5px; font-size:12px;">
+          <button onclick="checkAdmin()" class="btn-modern btn-primary" style="font-size:12px;">認証</button>
+        </div>
+      </div>
+      <div class="user-list" id="user-list"></div>
+    </div>
+
+    <div class="chat-area" id="chat-bg-layer">
+      <div id="chat-content" style="display:none; flex-direction:column; height:100%;">
+        <div style="padding:10px 20px; background:rgba(255,255,255,0.8); border-bottom:1px solid #ddd; font-weight:bold;">
+          📍 <span id="chat-title"></span>
+        </div>
+        <div id="messages"></div>
+        <div class="input-area" id="input-container" style="background:white; padding:15px; border-top:1px solid #ddd;">
+          <div id="reply-preview" style="display:none; color:var(--primary); font-size:12px; margin-bottom:5px; font-weight:bold;"></div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <label class="btn-modern" style="background:#f0f2f5; cursor:pointer; font-size:20px;">🖼️<input type="file" id="img-upload" hidden accept="image/*"></label>
+            <textarea id="msg-input" placeholder="メッセージ..." rows="1" style="flex:1; border:1px solid #ddd; padding:12px; border-radius:20px; resize:none; outline:none;"></textarea>
+            <button id="send-btn" class="btn-modern btn-primary">送信</button>
+          </div>
+          <div id="ban-msg" style="display:none; color:red; font-weight:bold; text-align:center; margin-top:5px;">🚫 BANされています</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 設定パネル -->
+  <div id="settings-panel" class="full-panel">
+    <div class="panel-header"><h3>⚙️ 設定</h3><button onclick="closePanel('settings-panel')" class="btn-modern">閉じる</button></div>
+    <div class="panel-content">
+      <div class="card">
+        <h4>🔔 通知設定</h4>
+        <p id="notif-status" style="font-size:13px; color:#666;"></p>
+        <button id="notif-req-btn" onclick="requestNotifPermission()" class="btn-modern btn-primary" style="display:none;">通知を許可する</button>
+      </div>
+      <div class="card">
+        <h4>🖼️ 背景画像をPCからアップロード</h4>
+        <label class="btn-modern btn-primary" style="display:inline-block; cursor:pointer;">画像を選択する<input type="file" id="bg-upload" hidden accept="image/*"></label>
+        <button onclick="resetBg()" class="btn-modern" style="background:#eee; margin-left:10px;">リセット</button>
+      </div>
+      <div class="card"><button onclick="auth.signOut(); location.reload();" class="btn-modern btn-danger" style="width:100%;">ログアウト</button></div>
+    </div>
+  </div>
+
+  <div id="news-panel" class="full-panel">
+    <div class="panel-header"><h3>✉️ お知らせ</h3><button onclick="closePanel('news-panel')" class="btn-modern">閉じる</button></div>
+    <div class="panel-content" id="news-list"></div>
+  </div>
+
+  <div id="admin-panel" class="full-panel">
+    <div class="panel-header"><h3>🛠️ 管理者パネル</h3><button onclick="closePanel('admin-panel')" class="btn-modern">閉じる</button></div>
+    <div class="panel-content">
+      <div class="card"><h4>📢 全体お知らせ配信</h4><textarea id="admin-news-input" style="width:100%; border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:10px;"></textarea><button onclick="sendAdminNews()" class="btn-modern btn-primary" style="width:100%;">配信</button></div>
+      <h4>👥 ユーザー管理</h4><div id="admin-user-management"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA-SopUchu7bKXw0k2ZoYYds03Lduz-nAk",
+      authDomain: "chat2-9bd77.firebaseapp.com",
+      projectId: "chat2-9bd77",
+      storageBucket: "chat2-9bd77.firebasestorage.app",
+      messagingSenderId: "813264060979",
+      appId: "1:813264060979:web:3b5ae389958989eb2b1946"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+    const ADMIN_CODE = "ryo1031junn0106";
+
+    let curUser = null, curRoom = null, unsubMsg = null, replyTo = null;
+    let isAdmin = false;
+    let unreadCounts = {};   // { roomId: count }
+    let roomWatchers = {};   // 既に監視中のルームID
+    let newsInitialized = false;
+    let reportsInitialized = false;
+
+    // ── 通知関連ユーティリティ ──────────────────────────────
+
+    // タブタイトルを未読数で更新
+    function updateTabTitle() {
+      const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+      document.title = total > 0 ? `(${total}) Super Chat` : 'Super Chat';
+    }
+
+    // サイドバーのバッジを更新
+    function refreshBadge(rid) {
+      const count = unreadCounts[rid] || 0;
+      document.querySelectorAll(`[data-room="${rid}"]`).forEach(el => {
+        let badge = el.querySelector('.unread-badge');
+        if (count > 0) {
+          if (!badge) { badge = document.createElement('span'); badge.className = 'unread-badge'; el.appendChild(badge); }
+          badge.textContent = count > 99 ? '99+' : count;
+        } else {
+          if (badge) badge.remove();
+        }
+      });
+    }
+
+    // ブラウザのプッシュ通知を送る
+    function pushNotif(title, body, onClick) {
+      if (Notification.permission !== 'granted') return;
+      if (!document.hidden) return; // フォーカス中は出さない
+      const n = new Notification(title, { body, icon: 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg' });
+      if (onClick) n.onclick = () => { window.focus(); n.close(); onClick(); };
+    }
+
+    // 通知許可リクエスト
+    window.requestNotifPermission = async () => {
+      await Notification.requestPermission();
+      renderNotifStatus();
+      document.getElementById('notif-banner').style.display = 'none';
+    };
+
+    function renderNotifStatus() {
+      const status = document.getElementById('notif-status');
+      const btn = document.getElementById('notif-req-btn');
+      if (!status) return;
+      if (Notification.permission === 'granted') {
+        status.textContent = '✅ 通知は有効です';
+        btn.style.display = 'none';
+      } else if (Notification.permission === 'denied') {
+        status.textContent = '🚫 通知がブロックされています。ブラウザの設定から許可してください。';
+        btn.style.display = 'none';
+      } else {
+        status.textContent = '🔔 通知は未設定です';
+        btn.style.display = 'inline-block';
+      }
+    }
+
+    // ── メッセージルームの監視（通知用） ───────────────────
+
+    function watchRoomForNotif(rid, roomTitle) {
+      if (roomWatchers[rid]) return;
+      let initialized = false;
+      const q = query(collection(db, "rooms", rid, "messages"), orderBy("createdAt", "desc"));
+      roomWatchers[rid] = onSnapshot(q, snap => {
+        if (!initialized) { initialized = true; return; } // 初回スキップ
+        const latest = snap.docs[0]?.data();
+        if (!latest) return;
+        if (latest.senderId === curUser.uid) return; // 自分の送信は無視
+        if (curRoom === rid && !document.hidden) return; // 今見てる部屋は無視
+
+        // 未読カウント加算
+        unreadCounts[rid] = (unreadCounts[rid] || 0) + 1;
+        refreshBadge(rid);
+        updateTabTitle();
+
+        // プッシュ通知
+        pushNotif(`💬 ${latest.senderName}`, latest.text.substring(0, 80), () => openChat(rid, roomTitle));
+      });
+    }
+
+    // ── 初期化 ────────────────────────────────────────────
+
+    window.loginWithGoogle = () => signInWithPopup(auth, provider).catch(e => alert(e.message));
+
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        curUser = user;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'flex';
+        document.getElementById('my-name').innerText = user.displayName;
+        document.getElementById('my-icon').src = user.photoURL;
+
+        const userRef = doc(db, "users", user.uid);
+        const snap = await getDoc(userRef);
+        if (!snap.exists()) await setDoc(userRef, { name: user.displayName, icon: user.photoURL, reportCount: 0, isBanned: false });
+
+        onSnapshot(userRef, s => {
+          const d = s.data();
+          document.getElementById('input-container').classList.toggle('locked', d?.isBanned);
+          document.getElementById('ban-msg').style.display = d?.isBanned ? 'block' : 'none';
+        });
+
+        const savedBg = localStorage.getItem('chat-bg');
+        if (savedBg) document.getElementById('chat-bg-layer').style.backgroundImage = `url(${savedBg})`;
+
+        // 通知許可バナーを2秒後に表示
+        if (Notification.permission === 'default') {
+          setTimeout(() => document.getElementById('notif-banner').style.display = 'flex', 2000);
+        }
+        renderNotifStatus();
+
+        initApp();
+        if (localStorage.getItem('isAdmin') === 'true') showAdminUI();
+      } else {
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('main-app').style.display = 'none';
+      }
+    });
+
+    function initApp() {
+      // ユーザー一覧 & DM部屋の監視
+      onSnapshot(collection(db, "users"), snap => {
+        const list = document.getElementById('user-list');
+        let html = `<div class="user-item ${curRoom === 'global' ? 'active' : ''}" data-room="global" onclick="openChat('global','🌐 全員チャット')">🌐 全員チャット</div>`;
+        snap.forEach(d => {
+          if (d.id === curUser.uid) return;
+          const u = d.data();
+          const rid = [curUser.uid, d.id].sort().join('_');
+          html += `<div class="user-item ${curRoom === rid ? 'active' : ''}" data-room="${rid}" onclick="openChat('${rid}','${u.name}')">
+            <img src="${u.icon || ''}" class="user-icon" style="width:25px;height:25px;">
+            <span>${u.name}</span>
+          </div>`;
+          watchRoomForNotif(rid, u.name);
+        });
+        list.innerHTML = html;
+        watchRoomForNotif('global', '🌐 全員チャット');
+
+        // バッジ再描画
+        Object.keys(unreadCounts).forEach(rid => refreshBadge(rid));
+      });
+
+      // お知らせ監視
+      onSnapshot(query(collection(db, "news"), orderBy("time", "desc")), snap => {
+        const nList = document.getElementById('news-list');
+        nList.innerHTML = "";
+        snap.forEach(d => { nList.innerHTML += `<div class="card"><small>${d.data().time?.toDate().toLocaleString() || ""}</small><p>${d.data().text}</p></div>`; });
+
+        if (!newsInitialized) { newsInitialized = true; return; }
+        const latest = snap.docs[0]?.data();
+        if (latest) pushNotif('📢 お知らせ', latest.text.substring(0, 80), () => openPanel('news-panel'));
+      });
+
+      // 通報監視（管理者向け）
+      if (isAdmin) {
+        onSnapshot(query(collection(db, "reports"), orderBy("time", "desc")), snap => {
+          if (!reportsInitialized) { reportsInitialized = true; return; }
+          const latest = snap.docs[0]?.data();
+          if (latest) pushNotif('🚨 新しい通報', `${latest.uname}: ${latest.text.substring(0, 60)}`, () => openPanel('admin-panel'));
+        });
+      }
+    }
+
+    // ── チャット操作 ──────────────────────────────────────
+
+    window.openChat = (rid, title) => {
+      curRoom = rid;
+      unreadCounts[rid] = 0;
+      refreshBadge(rid);
+      updateTabTitle();
+      document.getElementById('chat-title').innerText = title;
+      document.getElementById('chat-content').style.display = 'flex';
+      initApp();
+      loadMessages(rid);
+    };
+
+    function loadMessages(rid) {
+      if (unsubMsg) unsubMsg();
+      unsubMsg = onSnapshot(query(collection(db, "rooms", rid, "messages"), orderBy("createdAt", "asc")), snap => {
+        const box = document.getElementById('messages');
+        box.innerHTML = "";
+        snap.forEach(d => {
+          const m = d.data(); const isMe = m.senderId === curUser.uid;
+          const time = m.createdAt ? m.createdAt.toDate().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : "";
+          let text = m.text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+          text = text.replace(/【返信: (.*?)】/g, '<span style="color:var(--primary);font-size:12px;display:block;">↩️ $1への返信</span>');
+          box.innerHTML += `<div class="msg-container"><div class="msg-wrapper ${isMe ? 'my-wrapper' : 'other-wrapper'}" ondblclick='showMenu("${d.id}",${JSON.stringify(m).replace(/"/g,'&quot;')},${isMe})'><div class="msg-info-inner"><span>${m.senderName}</span><span>${time}</span></div><div style="white-space:pre-wrap;">${text}</div>${m.imageUrl ? `<img src="${m.imageUrl}" style="max-width:100%;border-radius:10px;margin-top:5px;">` : ""}</div></div>`;
+        });
+        box.scrollTop = box.scrollHeight;
+      });
+    }
+
+    window.showMenu = (mid, data, isMe) => {
+      const menu = document.getElementById('action-menu'); menu.style.display = 'flex';
+      document.getElementById('act-reply').onclick = () => {
+        replyTo = data.senderName;
+        document.getElementById('reply-preview').innerText = `↩️ ${data.senderName} への返信準備中`;
+        document.getElementById('reply-preview').style.display = 'block';
+        hideActionMenu();
+      };
+      document.getElementById('act-report').innerText = isMe ? "🗑️ 削除" : "🚨 通報";
+      document.getElementById('act-report').onclick = async () => {
+        if (isMe) { if (confirm("消す？")) await deleteDoc(doc(db, "rooms", curRoom, "messages", mid)); }
+        else { if (confirm("通報する？")) { await updateDoc(doc(db, "users", data.senderId), { reportCount: (data.reportCount || 0) + 1 }); await addDoc(collection(db, "reports"), { uid: data.senderId, uname: data.senderName, text: data.text, time: serverTimestamp() }); } }
+        hideActionMenu();
+      };
+    };
+
+    document.getElementById('send-btn').onclick = async () => {
+      const inp = document.getElementById('msg-input'); if (!inp.value.trim()) return;
+      const msg = replyTo ? `【返信: ${replyTo}】\n${inp.value}` : inp.value;
+      await addDoc(collection(db, "rooms", curRoom, "messages"), { text: msg, senderId: curUser.uid, senderName: curUser.displayName, createdAt: serverTimestamp() });
+      inp.value = ""; replyTo = null; document.getElementById('reply-preview').style.display = 'none';
+    };
+
+    document.getElementById('img-upload').onchange = e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async ev => {
+        await addDoc(collection(db, "rooms", curRoom, "messages"), { text: "画像を投稿しました", imageUrl: ev.target.result, senderId: curUser.uid, senderName: curUser.displayName, createdAt: serverTimestamp() });
+      };
+      reader.readAsDataURL(file);
+    };
+
+    document.getElementById('bg-upload').onchange = e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => { localStorage.setItem('chat-bg', ev.target.result); document.getElementById('chat-bg-layer').style.backgroundImage = `url(${ev.target.result})`; };
+      reader.readAsDataURL(file);
+    };
+    window.resetBg = () => { localStorage.removeItem('chat-bg'); document.getElementById('chat-bg-layer').style.backgroundImage = 'none'; };
+
+    // ── 管理者 ────────────────────────────────────────────
+
+    window.sendAdminNews = async () => {
+      const v = document.getElementById('admin-news-input').value;
+      if (v) await addDoc(collection(db, "news"), { text: v, time: serverTimestamp() });
+      document.getElementById('admin-news-input').value = "";
+    };
+
+    window.checkAdmin = () => {
+      if (document.getElementById('admin-pass').value === ADMIN_CODE) {
+        localStorage.setItem('isAdmin', 'true');
+        showAdminUI();
+      }
+    };
+
+    function showAdminUI() {
+      isAdmin = true;
+      document.getElementById('admin-btn').style.display = 'block';
+      document.getElementById('admin-login-area').style.display = 'none';
+      loadAdminPanel();
+      // 通報監視を開始（まだなら）
+      if (!reportsInitialized) {
+        onSnapshot(query(collection(db, "reports"), orderBy("time", "desc")), snap => {
+          if (!reportsInitialized) { reportsInitialized = true; return; }
+          const latest = snap.docs[0]?.data();
+          if (latest) pushNotif('🚨 新しい通報', `${latest.uname}: ${latest.text.substring(0, 60)}`, () => openPanel('admin-panel'));
+        });
+      }
+    }
+
+    function loadAdminPanel() {
+      onSnapshot(collection(db, "users"), snap => {
+        const div = document.getElementById('admin-user-management'); div.innerHTML = "";
+        snap.forEach(d => {
+          const u = d.data();
+          div.innerHTML += `<div class="card"><strong>${u.name}</strong> (${u.reportCount || 0}通報)<div style="display:flex;gap:5px;margin-top:5px;"><button onclick="updateStatus('${d.id}',true)" class="btn-modern btn-danger">BAN</button><button onclick="updateStatus('${d.id}',false)" class="btn-modern btn-primary">解除</button></div></div>`;
+        });
+      });
+    }
+
+    window.updateStatus = async (uid, s) => await updateDoc(doc(db, "users", uid), { isBanned: s });
+
+    window.hideActionMenu = () => document.getElementById('action-menu').style.display = 'none';
+    window.openPanel = id => { document.getElementById(id).style.display = 'flex'; renderNotifStatus(); };
+    window.closePanel = id => document.getElementById(id).style.display = 'none';
+    window.auth = auth;
+  </script>
+</body>
+</html>
+
+
+</body>
+</html>
