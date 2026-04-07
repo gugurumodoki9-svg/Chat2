@@ -267,11 +267,11 @@
           <div id="my-test-label" style="display:none; font-size:11px; color:#7c3aed;">🧪 テストアカウント</div>
         </div>
       </div>
-      <div style="display:flex; gap:5px; flex-wrap:wrap;">
-        <button onclick="openPanel('news-panel')" class="btn-modern btn-primary" style="flex:1;">✉️ 通知</button>
-        <button onclick="openPanel('settings-panel')" class="btn-modern" style="flex:1; background:#eee;">⚙️ 設定</button>
-        <button id="admin-btn" onclick="openPanel('admin-panel')" class="btn-modern btn-danger" style="display:none; flex:1;">🛠️ 管理</button>
-        <button id="dev-btn" onclick="openPanel('dev-panel')" class="btn-modern" style="display:none; flex:1; background:#1a1a2e; color:#a78bfa;">⚙️ Dev</button>
+      <div style="display:flex; gap:4px; flex-wrap:wrap;">
+        <button onclick="openPanel('news-panel')" style="flex:1; min-width:0; background:#e8f4ff; color:#0084ff; border:1px solid #c0d8f0; border-radius:8px; padding:6px 4px; font-size:12px; font-weight:bold; cursor:pointer;">✉️ 通知</button>
+        <button onclick="openPanel('settings-panel')" style="flex:1; min-width:0; background:#f4f4f4; color:#555; border:1px solid #ddd; border-radius:8px; padding:6px 4px; font-size:12px; font-weight:bold; cursor:pointer;">⚙️ 設定</button>
+        <button id="admin-btn" onclick="openPanel('admin-panel')" style="display:none; flex:1; min-width:0; background:#fff0f0; color:#ff4d4f; border:1px solid #ffc0c0; border-radius:8px; padding:6px 4px; font-size:12px; font-weight:bold; cursor:pointer;">🛠️ 管理</button>
+        <button id="dev-btn" onclick="openPanel('dev-panel')" style="display:none; flex:1; min-width:0; background:#1a1a2e; color:#a78bfa; border:1px solid #3a3a5e; border-radius:8px; padding:6px 4px; font-size:12px; font-weight:bold; cursor:pointer;">💻 Dev</button>
       </div>
       <div id="admin-login-area" style="margin-top:10px; display:flex; gap:5px;">
         <input type="password" id="admin-pass" placeholder="Admin Pass" style="width:60%; border-radius:10px; border:1px solid #ddd; padding:5px; font-size:12px;">
@@ -591,13 +591,24 @@
     document.getElementById('my-name').innerText = `🧪 ${session.name}`;
     document.getElementById('my-icon').src = '';
     document.getElementById('my-test-label').style.display = 'block';
+
+    // テスト垢はデフォルトで送信可能にする（lockedを明示解除）
+    document.getElementById('input-container').classList.remove('locked');
+    document.getElementById('ban-msg').style.display = 'none';
+
     const savedBg = localStorage.getItem('chat-bg');
     if (savedBg) document.getElementById('chat-bg-layer').style.backgroundImage = `url(${savedBg})`;
     if (Notification.permission === 'default') setTimeout(() => document.getElementById('notif-banner').style.display = 'flex', 2000);
     renderNotifStatus();
 
-    // テストユーザーのBANステータスをリアルタイム監視
-    onSnapshot(doc(db, "users", session.uid), s => {
+    // usersドキュメントが存在しなければ作成し、BANステータスをリアルタイム監視
+    const userRef = doc(db, "users", session.uid);
+    getDoc(userRef).then(snap => {
+      if (!snap.exists()) {
+        setDoc(userRef, { name: `🧪 ${session.name}`, icon: '', reportCount: 0, isBanned: false, isTestAccount: true });
+      }
+    });
+    onSnapshot(userRef, s => {
       const d = s.data();
       const isBanned = d?.isBanned || false;
       document.getElementById('input-container').classList.toggle('locked', isBanned);
@@ -651,14 +662,42 @@
   function initApp() {
     onSnapshot(collection(db, "users"), snap => {
       const list = document.getElementById('user-list');
+
+      // ユーザーを通常とテスト垢に分類
+      const testUsers = [];
+      const normalUsers = [];
+      snap.forEach(d => {
+        if (d.id === curUser.uid) return;
+        const u = d.data();
+        if (u.isTestAccount) testUsers.push({ d, u });
+        else normalUsers.push({ d, u });
+      });
+
+      // 全員チャット
       let html = `<div class="user-item ${curRoom==='global'?'active':''}" data-room="global" onclick="openChat('global','🌐 全員チャット')">
         <span style="font-size:20px;">🌐</span>
         <span class="room-name">全員チャット</span>
         <div class="badge-area"></div>
       </div>`;
-      snap.forEach(d => {
-        if (d.id === curUser.uid) return;
-        const u = d.data(); const rid = [curUser.uid, d.id].sort().join('_');
+
+      // テスト垢（全員チャットの直下に固定）
+      if (testUsers.length > 0) {
+        html += `<div style="padding:4px 12px; font-size:10px; color:#999; background:#f9f0ff; border-bottom:1px solid #ede0ff; letter-spacing:0.05em;">🧪 テストアカウント</div>`;
+        testUsers.forEach(({ d, u }) => {
+          const rid = [curUser.uid, d.id].sort().join('_');
+          html += `<div class="user-item ${curRoom===rid?'active':''}" data-room="${rid}" onclick="openChat('${rid}','${u.name}')" style="background:#fdf8ff; border-left-color:#c4a0f0;">
+            <span style="font-size:18px;">🧪</span>
+            <span class="room-name" style="color:#7c3aed; font-size:13px;">${u.name}</span>
+            <div class="badge-area"></div>
+          </div>`;
+          watchRoomForNotif(rid, u.name);
+        });
+        html += `<div style="padding:4px 12px; font-size:10px; color:#999; background:#f8f9fa; border-bottom:1px solid #eee; letter-spacing:0.05em;">💬 ユーザー</div>`;
+      }
+
+      // 通常ユーザー
+      normalUsers.forEach(({ d, u }) => {
+        const rid = [curUser.uid, d.id].sort().join('_');
         html += `<div class="user-item ${curRoom===rid?'active':''}" data-room="${rid}" onclick="openChat('${rid}','${u.name}')">
           ${u.icon ? `<img src="${u.icon}" class="user-icon" style="width:28px;height:28px;">` : `<span style="font-size:20px;">👤</span>`}
           <span class="room-name">${u.name}</span>
@@ -666,6 +705,7 @@
         </div>`;
         watchRoomForNotif(rid, u.name);
       });
+
       list.innerHTML = html;
       watchRoomForNotif('global', '🌐 全員チャット');
       Object.keys(unreadCounts).forEach(rid => refreshSidebarItem(rid));
