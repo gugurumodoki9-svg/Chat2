@@ -721,7 +721,7 @@
             <span class="news-author">👤 ${data.authorName || '管理者'}</span>
             <span>🕐 ${date ? formatDateTimeFull(date) : ''}</span>
           </div>
-          <p style="margin:0;">${data.text}</p>
+          <p style="margin:0; white-space:pre-wrap;">${data.text}</p>
         </div>`;
       });
       if (!newsInitialized) { newsInitialized = true; return; }
