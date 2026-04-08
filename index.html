@@ -979,6 +979,8 @@
       div.innerHTML = '';
       snap.forEach(d => {
         const u = d.data(); const isBanned = u.isBanned; const isTest = u.isTestAccount;
+        const tid = d.id.replace('test_', '');
+        const dispName = u.name.replace(/^🧪\s*/, '');
         div.innerHTML += `<div class="user-card ${isBanned?'is-banned':''}">
           <div style="font-size:26px;">${isTest ? '🧪' : '👤'}</div>
           <div class="user-card-info">
@@ -990,6 +992,7 @@
             <div class="umeta">通報: ${u.reportCount||0}件</div>
           </div>
           <div class="user-card-actions">
+            ${isTest ? `<button onclick="switchToTestUser('${d.id}','${dispName}','${tid}')" class="btn-modern" style="font-size:12px; background:#f5f0ff; color:#7c3aed; border:1px solid #c4a0f0;">切替</button>` : ''}
             ${isBanned
               ? `<button onclick="updateStatus('${d.id}',false)" class="btn-modern btn-primary" style="font-size:12px;">BAN解除</button>`
               : `<button onclick="updateStatus('${d.id}',true)" class="btn-modern btn-danger" style="font-size:12px;">BAN</button>`
@@ -1000,6 +1003,19 @@
     });
     loadTestAccountList();
   }
+
+  // テストアカウントに切り替え
+  window.switchToTestUser = async (uid, name, tid) => {
+    if (!confirm(`「🧪 ${name}」に切り替える?\n※ 現在のセッションはログアウトされます`)) return;
+    const snap = await getDoc(doc(db, "testAccounts", tid));
+    if (!snap.exists()) { alert('テストアカウントのデータが見つからないよ'); return; }
+    const data = snap.data();
+    if (data.isBanned) { alert('このアカウントはBANされてるよ'); return; }
+    if (!isTestUser) await signOut(auth);
+    localStorage.removeItem('testSession');
+    localStorage.setItem('testSession', JSON.stringify({ id: tid, name: data.name, uid }));
+    location.reload();
+  };
 
   window.updateStatus = async (uid, s) => await updateDoc(doc(db, "users", uid), { isBanned: s });
   window.hideActionMenu = () => document.getElementById('action-menu').style.display = 'none';
