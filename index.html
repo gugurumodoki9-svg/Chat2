@@ -4,21 +4,14 @@
   <meta charset="UTF-8">
   <title>Super Chat</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Kosugi+Maru&family=Zen+Maru+Gothic&family=DotGothic16&family=M+PLUS+Rounded+1c&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    /* スクリーンショット抑止 */
-    @media print { body { display: none !important; } }
-    #screenshot-guard {
-      display: none;
-      position: fixed; inset: 0; background: black; z-index: 999999;
-    }
     :root {
       --primary: #0084ff; --bg: #f0f2f5; --side-width: 300px;
       --danger: #ff4d4f; --success: #28a745; --active-chat: #e7f3ff;
       --msg-me: #dcf8c6; --msg-other: #ffffff;
     }
-    :root { --app-font: 'Noto Sans JP', sans-serif; }
-    * { font-family: var(--app-font) !important; box-sizing: border-box; }
+    * { font-family: 'Noto Sans JP', sans-serif !important; box-sizing: border-box; }
     body { margin: 0; background: var(--bg); height: 100vh; overflow: hidden; display: flex; }
 
     /* ── ログイン ── */
@@ -225,8 +218,6 @@
 </head>
 <body>
 
-<div id="screenshot-guard"></div>
-
 <div id="notif-banner">
   🔔 メッセージ通知を受け取りますか？
   <button onclick="requestNotifPermission()" class="btn-modern btn-primary">許可する</button>
@@ -326,29 +317,6 @@
       <h4>🖼️ 背景画像をPCからアップロード</h4>
       <label class="btn-modern btn-primary" style="display:inline-block; cursor:pointer;">画像を選択する<input type="file" id="bg-upload" hidden accept="image/*"></label>
       <button onclick="resetBg()" class="btn-modern" style="background:#eee; margin-left:10px;">リセット</button>
-    </div>
-    <div class="card">
-      <h4>🧑‍🎤 アイコン画像を変更</h4>
-      <div style="display:flex; align-items:center; gap:14px; margin-bottom:10px;">
-        <img id="icon-preview" src="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; background:#ddd; border:2px solid #ddd;">
-        <div>
-          <label class="btn-modern btn-primary" style="display:inline-block; cursor:pointer; font-size:13px;">
-            📷 画像を選ぶ<input type="file" id="icon-upload" hidden accept="image/*">
-          </label>
-          <button onclick="resetIcon()" class="btn-modern" style="background:#eee; margin-left:8px; font-size:13px;">リセット</button>
-        </div>
-      </div>
-      <p style="font-size:12px; color:#999; margin:0;">※ 他のユーザーのDMリストに反映されます</p>
-    </div>
-    <div class="card">
-      <h4>🔤 フォントを変更</h4>
-      <div style="display:flex; flex-wrap:wrap; gap:8px;">
-        <button onclick="setFont('Noto Sans JP')" class="btn-modern" id="font-btn-noto" style="background:var(--primary);color:white;">Noto Sans（デフォルト）</button>
-        <button onclick="setFont('Kosugi Maru')" class="btn-modern" id="font-btn-kosugi" style="background:#eee;">こすぎ丸（丸文字）</button>
-        <button onclick="setFont('Zen Maru Gothic')" class="btn-modern" id="font-btn-zen" style="background:#eee;">Zen丸ゴシック</button>
-        <button onclick="setFont('DotGothic16')" class="btn-modern" id="font-btn-dot" style="background:#eee;">ドットゴシック（レトロ）</button>
-        <button onclick="setFont('M PLUS Rounded 1c')" class="btn-modern" id="font-btn-mplus" style="background:#eee;">M PLUS丸（読みやすい）</button>
-      </div>
     </div>
     <div class="card"><button onclick="doLogout()" class="btn-modern btn-danger" style="width:100%;">ログアウト</button></div>
   </div>
@@ -588,10 +556,7 @@
         const a = d.data();
         div.innerHTML += `<div class="test-acc-item">
           <div><span class="acc-id">@${a.id}</span>　${a.name}</div>
-          <div style="display:flex;gap:5px;">
-            <button onclick="devLoginAs('${a.id}')" class="btn-modern" style="font-size:11px;padding:4px 10px;background:#7c3aed;color:white;">ログイン</button>
-            <button onclick="deleteTestAccount('${d.id}')" class="btn-modern btn-danger" style="font-size:11px;padding:4px 10px;">削除</button>
-          </div>
+          <button onclick="deleteTestAccount('${d.id}')" class="btn-modern btn-danger" style="font-size:11px;padding:4px 10px;">削除</button>
         </div>`;
       });
     });
@@ -635,8 +600,6 @@
     if (savedBg) document.getElementById('chat-bg-layer').style.backgroundImage = `url(${savedBg})`;
     if (Notification.permission === 'default') setTimeout(() => document.getElementById('notif-banner').style.display = 'flex', 2000);
     renderNotifStatus();
-    applyStoredIcon();
-    applyStoredFont();
 
     // usersドキュメントが存在しなければ作成し、BANステータスをリアルタイム監視
     const userRef = doc(db, "users", session.uid);
@@ -688,8 +651,6 @@
       if (savedBg) document.getElementById('chat-bg-layer').style.backgroundImage = `url(${savedBg})`;
       if (Notification.permission === 'default') setTimeout(() => document.getElementById('notif-banner').style.display = 'flex', 2000);
       renderNotifStatus();
-      applyStoredIcon();
-      applyStoredFont();
       initApp();
       if (localStorage.getItem('isAdmin') === 'true') showAdminUI();
       if (localStorage.getItem('isDev') === 'true') showDevUI();
@@ -902,83 +863,6 @@
     reader.readAsDataURL(file);
   };
   window.resetBg = () => { localStorage.removeItem('chat-bg'); document.getElementById('chat-bg-layer').style.backgroundImage = 'none'; };
-
-  // ─── アイコン設定 ────────────────────────────────────
-  document.getElementById('icon-upload').onchange = async e => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async ev => {
-      const iconData = ev.target.result;
-      localStorage.setItem('user-icon', iconData);
-      document.getElementById('my-icon').src = iconData;
-      document.getElementById('icon-preview').src = iconData;
-      if (curUser) {
-        await updateDoc(doc(db, "users", curUser.uid), { icon: iconData });
-        devLog('アイコン更新');
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-  window.resetIcon = async () => {
-    localStorage.removeItem('user-icon');
-    const defaultSrc = curUser?.photoURL || '';
-    document.getElementById('my-icon').src = defaultSrc;
-    document.getElementById('icon-preview').src = defaultSrc;
-    if (curUser) await updateDoc(doc(db, "users", curUser.uid), { icon: defaultSrc });
-  };
-  function applyStoredIcon() {
-    const saved = localStorage.getItem('user-icon');
-    if (saved) {
-      document.getElementById('my-icon').src = saved;
-      document.getElementById('icon-preview').src = saved;
-    }
-  }
-
-  // ─── フォント設定 ────────────────────────────────────
-  const FONTS = {
-    'Noto Sans JP': 'font-btn-noto',
-    'Kosugi Maru': 'font-btn-kosugi',
-    'Zen Maru Gothic': 'font-btn-zen',
-    'DotGothic16': 'font-btn-dot',
-    'M PLUS Rounded 1c': 'font-btn-mplus',
-  };
-  window.setFont = font => {
-    document.documentElement.style.setProperty('--app-font', `'${font}', sans-serif`);
-    document.body.style.fontFamily = `'${font}', sans-serif`;
-    localStorage.setItem('user-font', font);
-    Object.entries(FONTS).forEach(([f, id]) => {
-      const btn = document.getElementById(id);
-      if (btn) btn.style.background = f === font ? 'var(--primary)' : '#eee';
-      if (btn) btn.style.color = f === font ? 'white' : '';
-    });
-  };
-  function applyStoredFont() {
-    const saved = localStorage.getItem('user-font') || 'Noto Sans JP';
-    setFont(saved);
-  }
-
-  // ─── スクショ抑止（PrintScreenキーのみ） ─────────────
-  (function() {
-    const guard = document.getElementById('screenshot-guard');
-    document.addEventListener('keyup', e => {
-      if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
-        guard.style.display = 'block';
-        navigator.clipboard?.writeText('').catch(()=>{});
-        setTimeout(() => guard.style.display = 'none', 2000);
-      }
-    });
-  })();
-
-  // ─── 開発者パネルからテストアカウントにログイン ──────
-  window.devLoginAs = async tid => {
-    const snap = await getDoc(doc(db, "testAccounts", tid));
-    if (!snap.exists()) { alert('アカウントが見つからないよ'); return; }
-    const data = snap.data();
-    if (data.isBanned) { alert('このアカウントはBANされています'); return; }
-    closePanel('dev-panel');
-    localStorage.setItem('testSession', JSON.stringify({ id: tid, name: data.name, uid: `test_${tid}` }));
-    location.reload();
-  };
 
   // ─── 管理者 ───────────────────────────────────────────
 
