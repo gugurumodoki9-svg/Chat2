@@ -957,23 +957,14 @@
     setFont(saved);
   }
 
-  // ─── スクショ抑止 ────────────────────────────────────
+  // ─── スクショ抑止（PrintScreenキーのみ） ─────────────
   (function() {
     const guard = document.getElementById('screenshot-guard');
-    // PrintScreen / Snapshot キー検出
     document.addEventListener('keyup', e => {
       if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
         guard.style.display = 'block';
         navigator.clipboard?.writeText('').catch(()=>{});
         setTimeout(() => guard.style.display = 'none', 2000);
-      }
-    });
-    // visibilitychange（一部ブラウザのスクショ検出）
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
-        guard.style.display = 'block';
-      } else {
-        setTimeout(() => guard.style.display = 'none', 500);
       }
     });
   })();
