@@ -17,7 +17,8 @@
       --danger: #ff4d4f; --success: #28a745; --active-chat: #e7f3ff;
       --msg-me: #dcf8c6; --msg-other: #ffffff;
     }
-    * { font-family: 'Noto Sans JP', sans-serif !important; box-sizing: border-box; }
+    :root { --app-font: 'Noto Sans JP', sans-serif; }
+    * { font-family: var(--app-font) !important; box-sizing: border-box; }
     body { margin: 0; background: var(--bg); height: 100vh; overflow: hidden; display: flex; }
 
     /* ── ログイン ── */
@@ -943,7 +944,7 @@
   };
   window.setFont = font => {
     document.documentElement.style.setProperty('--app-font', `'${font}', sans-serif`);
-    document.querySelectorAll('*').forEach(el => el.style.fontFamily = `'${font}', sans-serif`);
+    document.body.style.fontFamily = `'${font}', sans-serif`;
     localStorage.setItem('user-font', font);
     Object.entries(FONTS).forEach(([f, id]) => {
       const btn = document.getElementById(id);
