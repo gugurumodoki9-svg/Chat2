@@ -269,6 +269,7 @@
       </div>
       <div style="display:flex; gap:4px; flex-wrap:wrap;">
         <button onclick="openPanel('news-panel')" style="flex:1; min-width:0; background:#e8f4ff; color:#0084ff; border:1px solid #c0d8f0; border-radius:8px; padding:6px 4px; font-size:12px; font-weight:bold; cursor:pointer;">✉️ 通知</button>
+        <button onclick="openUrlPanel()" style="flex:1; min-width:0; background:#f0fff4; color:#28a745; border:1px solid #b0e0c0; border-radius:8px; padding:6px 4px; font-size:12px; font-weight:bold; cursor:pointer;">🔗 URL</button>
         <button onclick="openPanel('settings-panel')" style="flex:1; min-width:0; background:#f4f4f4; color:#555; border:1px solid #ddd; border-radius:8px; padding:6px 4px; font-size:12px; font-weight:bold; cursor:pointer;">⚙️ 設定</button>
         <button id="admin-btn" onclick="openPanel('admin-panel')" style="display:none; flex:1; min-width:0; background:#fff0f0; color:#ff4d4f; border:1px solid #ffc0c0; border-radius:8px; padding:6px 4px; font-size:12px; font-weight:bold; cursor:pointer;">🛠️ 管理</button>
         <button id="dev-btn" onclick="openPanel('dev-panel')" style="display:none; flex:1; min-width:0; background:#1a1a2e; color:#a78bfa; border:1px solid #3a3a5e; border-radius:8px; padding:6px 4px; font-size:12px; font-weight:bold; cursor:pointer;">💻 Dev</button>
@@ -320,6 +321,24 @@
     </div>
     <div class="card"><button onclick="doLogout()" class="btn-modern btn-danger" style="width:100%;">ログアウト</button></div>
   </div>
+</div>
+
+<!-- URLまとめパネル -->
+<div id="url-panel" class="full-panel">
+  <div class="panel-header">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <h3 style="margin:0;">🔗 URLまとめ</h3>
+      <span id="url-count" style="background:#e8f4ff; color:#0084ff; border-radius:10px; font-size:12px; padding:2px 10px; font-weight:bold;"></span>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <select id="url-filter" onchange="filterUrls()" style="border:1px solid #ddd; border-radius:8px; padding:5px 8px; font-size:12px; outline:none; background:white;">
+        <option value="all">全ルーム</option>
+        <option value="global">🌐 全員チャット</option>
+      </select>
+      <button onclick="closePanel('url-panel')" class="btn-modern">閉じる</button>
+    </div>
+  </div>
+  <div class="panel-content" id="url-list" style="padding:16px;"></div>
 </div>
 
 <!-- お知らせパネル -->
@@ -844,6 +863,17 @@
     await addDoc(collection(db, "rooms", curRoom, "messages"), {
       text: msg, senderId: curUser.uid, senderName: curUser.displayName, createdAt: serverTimestamp()
     });
+    // URLが含まれていたら sharedUrls に保存
+    const urlMatches = inp.value.match(/https?:\/\/[^\s]+/g);
+    if (urlMatches) {
+      for (const url of urlMatches) {
+        await addDoc(collection(db, "sharedUrls"), {
+          url, roomId: curRoom,
+          senderName: curUser.displayName, senderId: curUser.uid,
+          createdAt: serverTimestamp()
+        });
+      }
+    }
     devLog(`送信: [${curRoom}] ${curUser.displayName}: ${msg.substring(0,40)}`);
     inp.value = ""; replyTo = null;
     document.getElementById('reply-preview').style.display = 'none';
@@ -1022,6 +1052,115 @@
   window.openPanel = id => { document.getElementById(id).style.display = 'flex'; renderNotifStatus(); };
   window.closePanel = id => document.getElementById(id).style.display = 'none';
   window.auth = auth;
+
+  // ─── URLまとめ ──────────────────────────────────────────
+  let allUrlDocs = [];   // 全件キャッシュ
+  let urlUnsub = null;
+
+  window.openUrlPanel = () => {
+    document.getElementById('url-panel').style.display = 'flex';
+    loadUrlPanel();
+    // フィルタのルーム選択肢を更新
+    buildUrlFilterOptions();
+  };
+
+  function loadUrlPanel() {
+    if (urlUnsub) urlUnsub();
+    urlUnsub = onSnapshot(
+      query(collection(db, "sharedUrls"), orderBy("createdAt", "desc")),
+      snap => {
+        allUrlDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        filterUrls();
+      }
+    );
+  }
+
+  window.filterUrls = () => {
+    const filter = document.getElementById('url-filter')?.value || 'all';
+    const list = document.getElementById('url-list');
+    const filtered = filter === 'all' ? allUrlDocs : allUrlDocs.filter(d => d.roomId === filter);
+
+    document.getElementById('url-count').textContent = `${filtered.length} 件`;
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<div style="text-align:center; color:#aaa; padding:40px; font-size:14px;">URLがまだ投稿されていないよ</div>';
+      return;
+    }
+
+    // 日付ごとにグループ化
+    const groups = {};
+    filtered.forEach(d => {
+      const date = d.createdAt ? d.createdAt.toDate() : new Date();
+      const key = `${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push({ ...d, _date: date });
+    });
+
+    let html = '';
+    Object.entries(groups).forEach(([dateKey, items]) => {
+      html += `<div style="font-size:11px; color:#999; font-weight:bold; margin:12px 0 6px; padding-bottom:4px; border-bottom:1px solid #eee;">${dateKey}</div>`;
+      items.forEach(item => {
+        const timeStr = `${String(item._date.getHours()).padStart(2,'0')}:${String(item._date.getMinutes()).padStart(2,'0')}`;
+        const roomLabel = item.roomId === 'global' ? '🌐 全員' : '💬 DM';
+        // ドメイン抽出
+        let domain = '';
+        try { domain = new URL(item.url).hostname.replace('www.', ''); } catch(e) { domain = item.url; }
+        // OGP風カード
+        html += `<div style="background:white; border:1px solid #eee; border-radius:12px; padding:12px 14px; margin-bottom:8px; display:flex; gap:12px; align-items:flex-start; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+          <div style="font-size:24px; line-height:1; flex-shrink:0;">🔗</div>
+          <div style="flex:1; min-width:0;">
+            <a href="${item.url}" target="_blank" rel="noopener"
+               style="color:var(--primary); font-size:13px; font-weight:bold; word-break:break-all; text-decoration:none; display:block; margin-bottom:3px;"
+               onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+              ${item.url.length > 70 ? item.url.substring(0,70)+'…' : item.url}
+            </a>
+            <div style="font-size:11px; color:#999; display:flex; gap:8px; flex-wrap:wrap;">
+              <span>🌐 ${domain}</span>
+              <span>👤 ${item.senderName}</span>
+              <span>${roomLabel}</span>
+              <span>🕐 ${timeStr}</span>
+            </div>
+          </div>
+          <button onclick="copyUrl('${item.url.replace(/'/g,"&#39;")}')"
+            style="flex-shrink:0; background:#f0f2f5; border:none; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:11px; color:#555;">
+            📋 コピー
+          </button>
+        </div>`;
+      });
+    });
+    list.innerHTML = html;
+  };
+
+  window.copyUrl = url => {
+    navigator.clipboard.writeText(url).then(() => {
+      // 一時的にフィードバック表示
+      const toast = document.createElement('div');
+      toast.textContent = '✅ URLをコピーしたよ！';
+      Object.assign(toast.style, {
+        position:'fixed', bottom:'30px', left:'50%', transform:'translateX(-50%)',
+        background:'#222', color:'white', padding:'10px 20px', borderRadius:'20px',
+        fontSize:'13px', zIndex:'99999', pointerEvents:'none',
+        transition:'opacity 0.3s'
+      });
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.style.opacity='0'; setTimeout(() => toast.remove(), 300); }, 1500);
+    });
+  };
+
+  function buildUrlFilterOptions() {
+    // ユーザー一覧を取得してDM選択肢を作る
+    const sel = document.getElementById('url-filter');
+    if (!sel) return;
+    // global以外の選択肢を一旦削除
+    while (sel.options.length > 2) sel.remove(2);
+    // allUrlDocsから登場したroomIdを収集
+    const roomIds = [...new Set(allUrlDocs.map(d => d.roomId).filter(r => r !== 'global'))];
+    roomIds.forEach(rid => {
+      const opt = document.createElement('option');
+      opt.value = rid; opt.textContent = `💬 DM (${rid.substring(0,8)}…)`;
+      sel.appendChild(opt);
+    });
+  }
 </script>
 </body>
 </html>
