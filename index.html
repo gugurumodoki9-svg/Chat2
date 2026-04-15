@@ -740,7 +740,7 @@
             <span class="news-author">👤 ${data.authorName || '管理者'}</span>
             <span>🕐 ${date ? formatDateTimeFull(date) : ''}</span>
           </div>
-          <p style="margin:0; white-space:pre-wrap;">${data.text}</p>
+          <p style="margin:0; white-space:pre-wrap;">${data.text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--primary);">$1</a>')}</p>
         </div>`;
       });
       if (!newsInitialized) { newsInitialized = true; return; }
