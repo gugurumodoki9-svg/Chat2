@@ -201,6 +201,85 @@
     }
     .dev-btn:hover { background: #3a3a5e; color: white; }
     .dev-btn.active-col { background: #4c1d95; border-color: #7c3aed; color: white; }
+
+    /* ── 通話UI ── */
+    #call-overlay {
+      position: fixed; inset: 0; z-index: 20000;
+      background: linear-gradient(160deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+      display: none; flex-direction: column; align-items: center; justify-content: space-between;
+      padding: 48px 24px 36px; color: white;
+    }
+    #call-overlay.active { display: flex; }
+    .call-top { text-align: center; }
+    .call-avatar {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: linear-gradient(135deg, #0084ff, #00c6ff);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 42px; margin: 0 auto 16px;
+      box-shadow: 0 0 0 0 rgba(0,132,255,0.5);
+    }
+    .call-avatar.ringing { animation: callPulse 1.5s ease-in-out infinite; }
+    @keyframes callPulse {
+      0%   { box-shadow: 0 0 0 0   rgba(0,132,255,0.6); }
+      70%  { box-shadow: 0 0 0 28px rgba(0,132,255,0);   }
+      100% { box-shadow: 0 0 0 0   rgba(0,132,255,0);   }
+    }
+    .call-name { font-size: 24px; font-weight: bold; margin-bottom: 6px; }
+    .call-status { font-size: 14px; color: #aaa; }
+    .call-timer { font-size: 22px; font-weight: bold; color: #4ade80; margin-top: 4px; display: none; }
+
+    /* ビデオ */
+    #call-videos {
+      display: none; position: relative;
+      width: 100%; max-width: 480px; height: 260px;
+      border-radius: 16px; overflow: hidden; background: #000; margin: 0 auto;
+    }
+    #remote-video { width: 100%; height: 100%; object-fit: cover; }
+    #local-video {
+      position: absolute; bottom: 10px; right: 10px;
+      width: 90px; height: 68px; border-radius: 10px;
+      object-fit: cover; border: 2px solid white; background: #111;
+    }
+    /* 画面共有 */
+    #screen-share-banner {
+      display: none; background: rgba(0,0,0,0.7); color: #4ade80;
+      font-size: 13px; font-weight: bold; border-radius: 8px;
+      padding: 6px 14px; margin-top: 8px;
+    }
+
+    /* 通話ボタン群 */
+    .call-controls { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; justify-content: center; }
+    .call-btn {
+      width: 60px; height: 60px; border-radius: 50%; border: none;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; cursor: pointer; transition: 0.2s; flex-direction: column; gap: 2px;
+    }
+    .call-btn span.lbl { font-size: 9px; font-weight: bold; color: white; }
+    .call-btn:hover { transform: scale(1.1); }
+    .call-btn.red   { background: #ef4444; }
+    .call-btn.green { background: #22c55e; }
+    .call-btn.gray  { background: rgba(255,255,255,0.15); }
+    .call-btn.gray.active { background: var(--primary); }
+    .call-btn.large { width: 72px; height: 72px; font-size: 26px; }
+
+    /* 着信バナー */
+    #incoming-call-banner {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      background: white; border-radius: 20px; padding: 14px 20px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.25); z-index: 19999;
+      display: none; align-items: center; gap: 14px; min-width: 280px;
+    }
+    .incoming-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: linear-gradient(135deg,#0084ff,#00c6ff);
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .incoming-info { flex: 1; }
+    .incoming-name { font-weight: bold; font-size: 15px; color: #222; }
+    .incoming-type { font-size: 12px; color: #888; }
+    .incoming-actions { display: flex; gap: 8px; }
+    .btn-answer { background: #22c55e; color: white; border: none; border-radius: 50%; width: 44px; height: 44px; font-size: 20px; cursor: pointer; }
+    .btn-decline { background: #ef4444; color: white; border: none; border-radius: 50%; width: 44px; height: 44px; font-size: 20px; cursor: pointer; }
     .fs-row {
       background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 8px;
       padding: 10px; margin-bottom: 8px; font-size: 12px; color: #ccc;
@@ -288,8 +367,9 @@
 
   <div class="chat-area" id="chat-bg-layer">
     <div id="chat-content" style="display:none; flex-direction:column; height:100%;">
-      <div style="padding:10px 20px; background:rgba(255,255,255,0.8); border-bottom:1px solid #ddd; font-weight:bold;">
-        📍 <span id="chat-title"></span>
+      <div style="padding:10px 20px; background:rgba(255,255,255,0.8); border-bottom:1px solid #ddd; font-weight:bold; display:flex; align-items:center; justify-content:space-between;">
+        <span>📍 <span id="chat-title"></span></span>
+        <button id="call-btn" onclick="startCall()" style="display:none; background:#22c55e; color:white; border:none; border-radius:20px; padding:6px 16px; font-size:13px; font-weight:bold; cursor:pointer;">📞 通話</button>
       </div>
       <div id="messages"></div>
       <div class="input-area" id="input-container" style="background:white; padding:15px; border-top:1px solid #ddd;">
@@ -305,7 +385,52 @@
   </div>
 </div>
 
-<!-- 設定パネル -->
+<!-- 着信バナー -->
+<div id="incoming-call-banner">
+  <div class="incoming-avatar" id="incoming-avatar">👤</div>
+  <div class="incoming-info">
+    <div class="incoming-name" id="incoming-name"></div>
+    <div class="incoming-type" id="incoming-type">📞 音声通話</div>
+  </div>
+  <div class="incoming-actions">
+    <button class="btn-answer" id="btn-answer" onclick="answerCall()">📞</button>
+    <button class="btn-decline" onclick="declineCall()">📵</button>
+  </div>
+</div>
+
+<!-- 通話オーバーレイ -->
+<div id="call-overlay">
+  <div class="call-top">
+    <div class="call-avatar ringing" id="call-avatar">👤</div>
+    <div class="call-name" id="call-peer-name"></div>
+    <div class="call-status" id="call-status">接続中…</div>
+    <div class="call-timer" id="call-timer">0:00</div>
+  </div>
+
+  <div id="call-videos">
+    <video id="remote-video" autoplay playsinline></video>
+    <video id="local-video" autoplay playsinline muted></video>
+  </div>
+  <div id="screen-share-banner">🖥️ 画面共有中</div>
+
+  <div class="call-controls">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+      <button class="call-btn gray" id="btn-mute" onclick="toggleMute()" title="ミュート">🎤<span class="lbl">ミュート</span></button>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+      <button class="call-btn gray" id="btn-speaker" onclick="toggleSpeaker()" title="スピーカー">🔊<span class="lbl">スピーカー</span></button>
+    </div>
+    <button class="call-btn red large" onclick="hangUp()" title="終話">📵</button>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+      <button class="call-btn gray" id="btn-video" onclick="toggleVideo()" title="ビデオ">📹<span class="lbl">ビデオ</span></button>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+      <button class="call-btn gray" id="btn-screen" onclick="toggleScreenShare()" title="画面共有">🖥️<span class="lbl">共有</span></button>
+    </div>
+  </div>
+</div>
+
+
 <div id="settings-panel" class="full-panel">
   <div class="panel-header"><h3>⚙️ 設定</h3><button onclick="closePanel('settings-panel')" class="btn-modern">閉じる</button></div>
   <div class="panel-content">
@@ -423,7 +548,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, updateDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, updateDoc, where, getDocs, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyA-SopUchu7bKXw0k2ZoYYds03Lduz-nAk",
@@ -453,10 +578,11 @@
 
   let curUser = null, curRoom = null, unsubMsg = null, replyTo = null;
   let isAdmin = false, isTestUser = false;
-  let unreadCounts = {};   // { rid: number }
-  let hasNewMsg = {};      // { rid: boolean } — サイドバー NEW フラグ
+  let unreadCounts = {};
+  let hasNewMsg = {};
   let roomWatchers = {};
   let newsInitialized = false, reportsInitialized = false;
+  let curCallPeerName = '';
 
   // ─── ユーティリティ ──────────────────────────────────
 
@@ -749,6 +875,7 @@
     });
 
     if (isAdmin) startReportWatch();
+    startCallListener();
   }
 
   function startReportWatch() {
@@ -770,6 +897,9 @@
     updateTabTitle();
     document.getElementById('chat-title').innerText = title;
     document.getElementById('chat-content').style.display = 'flex';
+    // グローバルチャット以外では通話ボタンを表示
+    document.getElementById('call-btn').style.display = rid === 'global' ? 'none' : 'inline-block';
+    curCallPeerName = title;
     initApp();
     deleteOldMessages(rid).then(() => loadMessages(rid));
   };
@@ -1131,7 +1261,384 @@
     list.innerHTML = html;
   };
 
-  window.copyUrl = url => {
+
+  // ═══════════════════════════════════════════════════════
+  //  WebRTC 通話システム（音声 / ビデオ / 画面共有）
+  // ═══════════════════════════════════════════════════════
+
+  const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+
+  let pc = null;           // RTCPeerConnection
+  let localStream = null;  // マイク/カメラストリーム
+  let screenStream = null; // 画面共有ストリーム
+  let callDocRef = null;   // Firestoreの通話ドキュメント参照
+  let callUnsub = null;    // Firestoreリスナー解除関数
+  let callTimerInterval = null;
+  let callStartTime = null;
+  let isCaller = false;
+  let isMuted = false;
+  let isVideoOn = false;
+  let isSpeakerOff = false;
+  let isSharingScreen = false;
+  let curCallPeerName = '';
+  let incomingCallData = null;
+  let callListenerUnsub = null;
+
+  // ─── 通話開始（発信者） ──────────────────────────────
+
+  window.startCall = async () => {
+    if (!curRoom || curRoom === 'global') return;
+    if (pc) { alert('すでに通話中だよ'); return; }
+
+    isCaller = true;
+    isVideoOn = false;
+
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch (e) {
+      alert('マイクへのアクセスが必要だよ: ' + e.message); return;
+    }
+
+    pc = new RTCPeerConnection(ICE_SERVERS);
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+    pc.ontrack = e => {
+      document.getElementById('remote-video').srcObject = e.streams[0];
+    };
+
+    // シグナリング用Firestoreドキュメント
+    callDocRef = doc(db, 'calls', curRoom);
+    await setDoc(callDocRef, {
+      callerId: curUser.uid,
+      callerName: curUser.displayName,
+      status: 'ringing',
+      type: 'audio',
+      createdAt: serverTimestamp()
+    });
+
+    // ICE候補を送信
+    pc.onicecandidate = async e => {
+      if (e.candidate) {
+        await addDoc(collection(db, 'calls', curRoom, 'callerCandidates'), e.candidate.toJSON());
+      }
+    };
+
+    // オファー作成・保存
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await updateDoc(callDocRef, { offer: { type: offer.type, sdp: offer.sdp } });
+
+    // 相手の応答を監視
+    callUnsub = onSnapshot(callDocRef, async snap => {
+      const data = snap.data();
+      if (!data) return;
+      if (data.status === 'declined') { hangUp(true, '通話が拒否されました'); return; }
+      if (data.answer && pc.signalingState === 'have-local-offer') {
+        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+      }
+      if (data.status === 'connected') showCallConnected(data);
+    });
+
+    // 相手のICE候補を受信
+    onSnapshot(collection(db, 'calls', curRoom, 'answerCandidates'), snap => {
+      snap.docChanges().forEach(async change => {
+        if (change.type === 'added') {
+          try { await pc.addIceCandidate(new RTCIceCandidate(change.doc.data())); } catch(e) {}
+        }
+      });
+    });
+
+    showCallOverlay(curCallPeerName, '呼び出し中…', true);
+  };
+
+  // ─── 着信受信リスナー ────────────────────────────────
+
+  function startCallListener() {
+    if (callListenerUnsub) callListenerUnsub();
+    // ユーザーが参加しているDMルームを監視
+    callListenerUnsub = onSnapshot(collection(db, 'calls'), snap => {
+      snap.docChanges().forEach(change => {
+        if (change.type !== 'added' && change.type !== 'modified') return;
+        const data = change.doc.data();
+        const rid = change.doc.id;
+        // 自分が含まれるDMルームかチェック（roomIDにuid含まれているか）
+        if (!rid.includes(curUser.uid)) return;
+        if (data.callerId === curUser.uid) return; // 自分の発信
+        if (data.status !== 'ringing') return;
+        if (pc) return; // 既に通話中
+
+        incomingCallData = { rid, ...data };
+        showIncomingBanner(data.callerName, data.type || 'audio');
+      });
+    });
+  }
+
+  // ─── 着信に出る ─────────────────────────────────────
+
+  window.answerCall = async () => {
+    if (!incomingCallData) return;
+    hideIncomingBanner();
+    const { rid, callerName } = incomingCallData;
+
+    isCaller = false;
+    isVideoOn = false;
+    curCallPeerName = callerName;
+
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch (e) {
+      alert('マイクへのアクセスが必要だよ: ' + e.message); return;
+    }
+
+    pc = new RTCPeerConnection(ICE_SERVERS);
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+    pc.ontrack = e => {
+      document.getElementById('remote-video').srcObject = e.streams[0];
+    };
+
+    pc.onicecandidate = async e => {
+      if (e.candidate) {
+        await addDoc(collection(db, 'calls', rid, 'answerCandidates'), e.candidate.toJSON());
+      }
+    };
+
+    callDocRef = doc(db, 'calls', rid);
+    const callData = (await getDoc(callDocRef)).data();
+    await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await updateDoc(callDocRef, {
+      answer: { type: answer.type, sdp: answer.sdp },
+      status: 'connected'
+    });
+
+    // 発信者のICE候補受信
+    onSnapshot(collection(db, 'calls', rid, 'callerCandidates'), snap => {
+      snap.docChanges().forEach(async change => {
+        if (change.type === 'added') {
+          try { await pc.addIceCandidate(new RTCIceCandidate(change.doc.data())); } catch(e) {}
+        }
+      });
+    });
+
+    callUnsub = onSnapshot(callDocRef, snap => {
+      const data = snap.data();
+      if (!data || data.status === 'ended') { hangUp(true); return; }
+      if (data.status === 'connected') showCallConnected(data);
+    });
+
+    showCallOverlay(callerName, '接続中…', false);
+    incomingCallData = null;
+  };
+
+  // ─── 着信拒否 ────────────────────────────────────────
+
+  window.declineCall = async () => {
+    if (!incomingCallData) { hideIncomingBanner(); return; }
+    const ref = doc(db, 'calls', incomingCallData.rid);
+    await updateDoc(ref, { status: 'declined' });
+    incomingCallData = null;
+    hideIncomingBanner();
+  };
+
+  // ─── 通話確立時の処理 ───────────────────────────────
+
+  function showCallConnected(data) {
+    document.getElementById('call-status').style.display = 'none';
+    document.getElementById('call-avatar').classList.remove('ringing');
+    const timer = document.getElementById('call-timer');
+    timer.style.display = 'block';
+    if (!callStartTime) {
+      callStartTime = Date.now();
+      callTimerInterval = setInterval(() => {
+        const s = Math.floor((Date.now() - callStartTime) / 1000);
+        timer.textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+      }, 1000);
+    }
+  }
+
+  // ─── 電話を切る ─────────────────────────────────────
+
+  window.hangUp = async (silent = false, msg = null) => {
+    if (callUnsub) { callUnsub(); callUnsub = null; }
+    if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
+    if (pc) { pc.close(); pc = null; }
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+    callStartTime = null;
+    isMuted = false; isVideoOn = false; isSpeakerOff = false; isSharingScreen = false;
+    document.getElementById('call-videos').style.display = 'none';
+    document.getElementById('screen-share-banner').style.display = 'none';
+    document.getElementById('remote-video').srcObject = null;
+    document.getElementById('local-video').srcObject = null;
+    document.getElementById('btn-video').classList.remove('active');
+    document.getElementById('btn-screen').classList.remove('active');
+    document.getElementById('btn-mute').classList.remove('active');
+
+    if (!silent && callDocRef) {
+      try { await updateDoc(callDocRef, { status: 'ended' }); } catch(e) {}
+    }
+    callDocRef = null;
+    hideCallOverlay();
+    if (msg) setTimeout(() => alert(msg), 100);
+  };
+
+  // ─── ミュート ────────────────────────────────────────
+
+  window.toggleMute = () => {
+    if (!localStream) return;
+    isMuted = !isMuted;
+    localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+    const btn = document.getElementById('btn-mute');
+    btn.textContent = isMuted ? '🔇' : '🎤';
+    btn.innerHTML = (isMuted ? '🔇' : '🎤') + '<span class="lbl">' + (isMuted ? 'ミュート中' : 'ミュート') + '</span>';
+    btn.classList.toggle('active', isMuted);
+  };
+
+  // ─── スピーカー ──────────────────────────────────────
+
+  window.toggleSpeaker = () => {
+    isSpeakerOff = !isSpeakerOff;
+    const remote = document.getElementById('remote-video');
+    remote.muted = isSpeakerOff;
+    const btn = document.getElementById('btn-speaker');
+    btn.innerHTML = (isSpeakerOff ? '🔇' : '🔊') + '<span class="lbl">' + (isSpeakerOff ? 'スピーカーOFF' : 'スピーカー') + '</span>';
+    btn.classList.toggle('active', isSpeakerOff);
+  };
+
+  // ─── ビデオON/OFF（LINEの通話中ビデオ切替） ─────────
+
+  window.toggleVideo = async () => {
+    if (!pc || !localStream) return;
+
+    if (!isVideoOn) {
+      // ビデオを追加
+      let videoStream;
+      try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      } catch(e) { alert('カメラへのアクセスが必要だよ'); return; }
+
+      const videoTrack = videoStream.getVideoTracks()[0];
+      const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+      if (sender) {
+        sender.replaceTrack(videoTrack);
+      } else {
+        pc.addTrack(videoTrack, localStream);
+      }
+      localStream.addTrack(videoTrack);
+      document.getElementById('local-video').srcObject = localStream;
+      document.getElementById('call-videos').style.display = 'block';
+      document.getElementById('call-avatar').style.display = 'none';
+
+      isVideoOn = true;
+      if (callDocRef) updateDoc(callDocRef, { hasVideo: true });
+    } else {
+      // ビデオをOFF
+      localStream.getVideoTracks().forEach(t => { t.stop(); localStream.removeTrack(t); });
+      const hasRemoteVideo = document.getElementById('remote-video').srcObject?.getVideoTracks().length > 0;
+      if (!hasRemoteVideo) {
+        document.getElementById('call-videos').style.display = 'none';
+        document.getElementById('call-avatar').style.display = 'flex';
+      }
+      isVideoOn = false;
+      if (callDocRef) updateDoc(callDocRef, { hasVideo: false });
+    }
+
+    const btn = document.getElementById('btn-video');
+    btn.innerHTML = (isVideoOn ? '📹' : '📷') + '<span class="lbl">' + (isVideoOn ? 'カメラON' : 'ビデオ') + '</span>';
+    btn.classList.toggle('active', isVideoOn);
+  };
+
+  // ─── 画面共有 ────────────────────────────────────────
+
+  window.toggleScreenShare = async () => {
+    if (!pc) return;
+
+    if (!isSharingScreen) {
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      } catch(e) { return; } // キャンセル
+
+      const screenTrack = screenStream.getVideoTracks()[0];
+      const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+      if (sender) {
+        sender.replaceTrack(screenTrack);
+      } else {
+        pc.addTrack(screenTrack, screenStream);
+      }
+
+      document.getElementById('local-video').srcObject = screenStream;
+      document.getElementById('call-videos').style.display = 'block';
+      document.getElementById('screen-share-banner').style.display = 'block';
+      document.getElementById('call-avatar').style.display = 'none';
+      isSharingScreen = true;
+
+      // 共有停止されたとき自動解除
+      screenTrack.onended = () => {
+        if (isSharingScreen) toggleScreenShare();
+      };
+      if (callDocRef) updateDoc(callDocRef, { isSharing: true });
+    } else {
+      // 画面共有停止
+      if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+      // ビデオが有効なら戻す
+      const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+      if (isVideoOn && localStream) {
+        const vt = localStream.getVideoTracks()[0];
+        if (sender && vt) sender.replaceTrack(vt);
+        document.getElementById('local-video').srcObject = localStream;
+      } else {
+        document.getElementById('call-videos').style.display = 'none';
+        document.getElementById('call-avatar').style.display = 'flex';
+      }
+      document.getElementById('screen-share-banner').style.display = 'none';
+      isSharingScreen = false;
+      if (callDocRef) updateDoc(callDocRef, { isSharing: false });
+    }
+
+    const btn = document.getElementById('btn-screen');
+    btn.innerHTML = '🖥️<span class="lbl">' + (isSharingScreen ? '共有中' : '共有') + '</span>';
+    btn.classList.toggle('active', isSharingScreen);
+  };
+
+  // ─── オーバーレイ表示/非表示 ────────────────────────
+
+  function showCallOverlay(name, status, ringing) {
+    document.getElementById('call-overlay').classList.add('active');
+    document.getElementById('call-peer-name').textContent = name;
+    document.getElementById('call-status').textContent = status;
+    document.getElementById('call-status').style.display = 'block';
+    document.getElementById('call-timer').style.display = 'none';
+    document.getElementById('call-avatar').style.display = 'flex';
+    document.getElementById('call-videos').style.display = 'none';
+    callStartTime = null;
+    if (ringing) document.getElementById('call-avatar').classList.add('ringing');
+    else document.getElementById('call-avatar').classList.remove('ringing');
+  }
+
+  function hideCallOverlay() {
+    document.getElementById('call-overlay').classList.remove('active');
+    document.getElementById('call-timer').textContent = '0:00';
+    document.getElementById('call-timer').style.display = 'none';
+    document.getElementById('call-status').style.display = 'block';
+    document.getElementById('call-status').textContent = '接続中…';
+  }
+
+  function showIncomingBanner(name, type) {
+    document.getElementById('incoming-name').textContent = name;
+    document.getElementById('incoming-type').textContent = type === 'audio' ? '📞 音声通話' : '📹 ビデオ通話';
+    document.getElementById('incoming-call-banner').style.display = 'flex';
+  }
+
+  function hideIncomingBanner() {
+    document.getElementById('incoming-call-banner').style.display = 'none';
+  }
+
+  // initApp の後に通話リスナーを起動
+
+
     navigator.clipboard.writeText(url).then(() => {
       // 一時的にフィードバック表示
       const toast = document.createElement('div');
