@@ -312,6 +312,28 @@
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="18">
       Googleでログイン
     </button>
+
+    <!-- アカウントログイン / 登録 -->
+    <div style="margin-top:14px; border-top:1px solid #eee; padding-top:14px;">
+      <div style="display:flex; gap:4px; margin-bottom:12px;">
+        <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1; padding:7px; border:1px solid #0084ff; border-radius:8px; background:#0084ff; color:white; font-weight:bold; font-size:13px; cursor:pointer;">ログイン</button>
+        <button id="tab-register" onclick="switchAuthTab('register')" style="flex:1; padding:7px; border:1px solid #ddd; border-radius:8px; background:white; color:#888; font-weight:bold; font-size:13px; cursor:pointer;">新規登録</button>
+      </div>
+      <div id="auth-login-form">
+        <input type="text" id="auth-login-id" placeholder="ID" style="width:100%; border:1px solid #ddd; border-radius:10px; padding:9px; margin-bottom:7px; font-size:14px; outline:none; box-sizing:border-box;">
+        <input type="password" id="auth-login-pass" placeholder="パスワード" style="width:100%; border:1px solid #ddd; border-radius:10px; padding:9px; margin-bottom:7px; font-size:14px; outline:none; box-sizing:border-box;">
+        <button onclick="loginWithUserAccount()" class="btn-modern" style="width:100%; background:#0084ff; color:white; padding:11px; font-size:14px;">ログイン</button>
+      </div>
+      <div id="auth-register-form" style="display:none;">
+        <input type="text" id="auth-reg-id" placeholder="ID（英数字・アンダーバーのみ）" style="width:100%; border:1px solid #ddd; border-radius:10px; padding:9px; margin-bottom:7px; font-size:14px; outline:none; box-sizing:border-box;">
+        <input type="text" id="auth-reg-name" placeholder="表示名" style="width:100%; border:1px solid #ddd; border-radius:10px; padding:9px; margin-bottom:7px; font-size:14px; outline:none; box-sizing:border-box;">
+        <input type="password" id="auth-reg-pass" placeholder="パスワード（6文字以上）" style="width:100%; border:1px solid #ddd; border-radius:10px; padding:9px; margin-bottom:7px; font-size:14px; outline:none; box-sizing:border-box;">
+        <input type="password" id="auth-reg-pass2" placeholder="パスワード（確認）" style="width:100%; border:1px solid #ddd; border-radius:10px; padding:9px; margin-bottom:7px; font-size:14px; outline:none; box-sizing:border-box;">
+        <button onclick="registerUserAccount()" class="btn-modern" style="width:100%; background:#28a745; color:white; padding:11px; font-size:14px;">アカウント作成</button>
+      </div>
+      <div id="auth-error" style="color:#e53e3e; font-size:12px; margin-top:8px; display:none; text-align:center;"></div>
+    </div>
+
     <!-- テストログインエリア：開発者コード入力で表示 -->
     <div style="margin-top:12px; border-top:1px solid #eee; padding-top:12px;">
       <div id="dev-unlock-area" style="display:flex; gap:6px;">
@@ -548,7 +570,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
   import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, updateDoc, where, getDocs, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, updateDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyA-SopUchu7bKXw0k2ZoYYds03Lduz-nAk",
@@ -713,6 +735,87 @@
     await deleteDoc(doc(db, "users", `test_${tid}`));
   };
 
+  // ─── タブ切り替え ────────────────────────────────────
+  window.switchAuthTab = (tab) => {
+    const isLogin = tab === 'login';
+    document.getElementById('auth-login-form').style.display    = isLogin ? 'block' : 'none';
+    document.getElementById('auth-register-form').style.display = isLogin ? 'none'  : 'block';
+    document.getElementById('auth-error').style.display = 'none';
+    document.getElementById('tab-login').style.background    = isLogin ? '#0084ff' : 'white';
+    document.getElementById('tab-login').style.color         = isLogin ? 'white'   : '#888';
+    document.getElementById('tab-login').style.borderColor   = isLogin ? '#0084ff' : '#ddd';
+    document.getElementById('tab-register').style.background = isLogin ? 'white'   : '#28a745';
+    document.getElementById('tab-register').style.color      = isLogin ? '#888'    : 'white';
+    document.getElementById('tab-register').style.borderColor= isLogin ? '#ddd'    : '#28a745';
+  };
+
+  function showAuthError(msg) {
+    const el = document.getElementById('auth-error');
+    el.textContent = msg; el.style.display = 'block';
+  }
+
+  // ─── ユーザーアカウント登録 ──────────────────────────
+  window.registerUserAccount = async () => {
+    const id    = document.getElementById('auth-reg-id').value.trim();
+    const name  = document.getElementById('auth-reg-name').value.trim();
+    const pass  = document.getElementById('auth-reg-pass').value;
+    const pass2 = document.getElementById('auth-reg-pass2').value;
+    document.getElementById('auth-error').style.display = 'none';
+    if (!id || !name || !pass || !pass2) return showAuthError('全項目入力してね');
+    if (!/^[a-zA-Z0-9_]+$/.test(id))    return showAuthError('IDは英数字とアンダーバーのみ使えるよ');
+    if (pass.length < 6)                 return showAuthError('パスワードは6文字以上にしてね');
+    if (pass !== pass2)                  return showAuthError('パスワードが一致してないよ');
+    const ref = doc(db, "userAccounts", id);
+    if ((await getDoc(ref)).exists())    return showAuthError('そのIDはすでに使われてるよ');
+    const hashed = btoa(unescape(encodeURIComponent(pass)));
+    await setDoc(ref, { id, name, pass: hashed, createdAt: serverTimestamp(), isBanned: false });
+    await setDoc(doc(db, "users", `user_${id}`), { name, icon: '', reportCount: 0, isBanned: false, isUserAccount: true });
+    // 登録後そのままログイン
+    localStorage.setItem('userSession', JSON.stringify({ id, name, uid: `user_${id}` }));
+    startUserSession({ id, name, uid: `user_${id}` });
+  };
+
+  // ─── ユーザーアカウントログイン ─────────────────────
+  window.loginWithUserAccount = async () => {
+    const id   = document.getElementById('auth-login-id').value.trim();
+    const pass = document.getElementById('auth-login-pass').value;
+    document.getElementById('auth-error').style.display = 'none';
+    if (!id || !pass) return showAuthError('IDとパスワードを入力してね');
+    const snap = await getDoc(doc(db, "userAccounts", id));
+    if (!snap.exists())                                                    return showAuthError('IDが見つからないよ');
+    const data = snap.data();
+    if (data.pass !== btoa(unescape(encodeURIComponent(pass))))            return showAuthError('パスワードが違うよ');
+    if (data.isBanned)                                                     return showAuthError('このアカウントはBANされています');
+    localStorage.setItem('userSession', JSON.stringify({ id, name: data.name, uid: `user_${id}` }));
+    startUserSession({ id, name: data.name, uid: `user_${id}` });
+  };
+
+  function startUserSession(session) {
+    isTestUser = true; // テストと同じ仕組みを流用
+    curUser = { uid: session.uid, displayName: session.name, photoURL: '' };
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'flex';
+    document.getElementById('my-name').innerText = session.name;
+    document.getElementById('my-icon').src = '';
+    document.getElementById('input-container').classList.remove('locked');
+    document.getElementById('ban-msg').style.display = 'none';
+    const savedBg = localStorage.getItem('chat-bg');
+    if (savedBg) document.getElementById('chat-bg-layer').style.backgroundImage = `url(${savedBg})`;
+    if (Notification.permission === 'default') setTimeout(() => document.getElementById('notif-banner').style.display = 'flex', 2000);
+    renderNotifStatus();
+    const userRef = doc(db, "users", session.uid);
+    getDoc(userRef).then(s => {
+      if (!s.exists()) setDoc(userRef, { name: session.name, icon: '', reportCount: 0, isBanned: false, isUserAccount: true });
+    });
+    onSnapshot(userRef, s => {
+      const d = s.data();
+      const isBanned = d?.isBanned || false;
+      document.getElementById('input-container').classList.toggle('locked', isBanned);
+      document.getElementById('ban-msg').style.display = isBanned ? 'block' : 'none';
+    });
+    initApp();
+  }
+
   window.loginWithTestAccount = async () => {
     const tid = document.getElementById('test-login-id').value.trim();
     const tpass = document.getElementById('test-login-pass').value.trim();
@@ -764,7 +867,7 @@
   }
 
   window.doLogout = async () => {
-    if (isTestUser) localStorage.removeItem('testSession');
+    if (isTestUser) { localStorage.removeItem('testSession'); localStorage.removeItem('userSession'); }
     else await signOut(auth);
     location.reload();
   };
@@ -782,9 +885,13 @@
     if (e.code !== 'auth/no-current-user') console.error('redirect result error:', e);
   });
 
+  // ユーザーセッション復元
+  const savedUserSession = localStorage.getItem('userSession');
+  if (savedUserSession) { startUserSession(JSON.parse(savedUserSession)); }
+
   // テストセッション復元
   const savedSession = localStorage.getItem('testSession');
-  if (savedSession) startTestSession(JSON.parse(savedSession));
+  if (savedSession && !savedUserSession) startTestSession(JSON.parse(savedSession));
 
   onAuthStateChanged(auth, async user => {
     if (isTestUser) return;
