@@ -1646,9 +1646,8 @@
 
   // initApp の後に通話リスナーを起動
 
-
+  window.copyUrl = (url) => {
     navigator.clipboard.writeText(url).then(() => {
-      // 一時的にフィードバック表示
       const toast = document.createElement('div');
       toast.textContent = '✅ URLをコピーしたよ！';
       Object.assign(toast.style, {
@@ -1661,6 +1660,7 @@
       setTimeout(() => { toast.style.opacity='0'; setTimeout(() => toast.remove(), 300); }, 1500);
     });
   };
+
 
   function buildUrlFilterOptions() {
     // ユーザー一覧を取得してDM選択肢を作る
