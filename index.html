@@ -672,7 +672,7 @@
   // ─── 古いメッセージ削除 ───────────────────────────────
 
   async function deleteOldMessages(rid) {
-    const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 5);
     const snap = await getDocs(query(collection(db, "rooms", rid, "messages"), where("createdAt", "<", oneMonthAgo)));
     snap.forEach(async d => deleteDoc(doc(db, "rooms", rid, "messages", d.id)));
   }
