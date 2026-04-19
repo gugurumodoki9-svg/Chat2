@@ -569,7 +569,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-  import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, updateDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -874,16 +874,7 @@
 
   // ─── 初期化 ───────────────────────────────────────────
 
-  window.loginWithGoogle = () => signInWithRedirect(auth, provider).catch(e => alert(e.message));
-
-  // リダイレクトから戻ってきたときの処理
-  getRedirectResult(auth).then(result => {
-    if (result?.user) {
-      // onAuthStateChangedが拾うので何もしなくてOK
-    }
-  }).catch(e => {
-    if (e.code !== 'auth/no-current-user') console.error('redirect result error:', e);
-  });
+  window.loginWithGoogle = () => signInWithPopup(auth, provider).catch(e => alert(e.message));
 
   // ユーザーセッション復元
   const savedUserSession = localStorage.getItem('userSession');
