@@ -1433,9 +1433,15 @@
 
     pc = new RTCPeerConnection(ICE_SERVERS);
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    // videoトラックを最初からSDPに含める（画面共有時にreplaceTrackだけで映像が届くようにする）
+    pc.addTransceiver('video', { direction: 'sendrecv' });
 
     pc.ontrack = e => {
-      document.getElementById('remote-video').srcObject = e.streams[0];
+      if (e.track.kind === 'video') {
+        document.getElementById('remote-video').srcObject = e.streams[0] || new MediaStream([e.track]);
+        document.getElementById('call-videos').style.display = 'block';
+        document.getElementById('call-avatar').style.display = 'none';
+      }
     };
 
     // シグナリング用Firestoreドキュメント
@@ -1525,9 +1531,15 @@
 
     pc = new RTCPeerConnection(ICE_SERVERS);
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    // videoトラックを最初からSDPに含める（画面共有時にreplaceTrackだけで映像が届くようにする）
+    pc.addTransceiver('video', { direction: 'sendrecv' });
 
     pc.ontrack = e => {
-      document.getElementById('remote-video').srcObject = e.streams[0];
+      if (e.track.kind === 'video') {
+        document.getElementById('remote-video').srcObject = e.streams[0] || new MediaStream([e.track]);
+        document.getElementById('call-videos').style.display = 'block';
+        document.getElementById('call-avatar').style.display = 'none';
+      }
     };
 
     pc.onicecandidate = async e => {
@@ -1763,48 +1775,38 @@
 
     if (!isSharingScreen) {
       try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
       } catch(e) { return; } // キャンセル
 
       const screenTrack = screenStream.getVideoTracks()[0];
-      const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-      if (sender) {
-        await sender.replaceTrack(screenTrack);
-      } else {
-        // senderがない場合はlocalStreamに紐付けて追加（相手のontrackで受け取れるように）
-        pc.addTrack(screenTrack, localStream || screenStream);
-        // offer/answerを再ネゴシエーション
-        if (pc.signalingState === 'stable' && callDocRef) {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          await updateDoc(callDocRef, { offer: { type: offer.type, sdp: offer.sdp }, renegotiate: Date.now() });
-        }
+      // addTransceiverで確立済みのvideo senderにreplaceTrackするだけで再ネゴシエーション不要
+      const sender = pc.getSenders().find(s => s.track?.kind === 'video' || s.track === null);
+      if (!sender) {
+        alert('画面共有に対応していない接続状態です。一度通話を切り直してください。');
+        screenStream.getTracks().forEach(t => t.stop()); screenStream = null; return;
       }
+      await sender.replaceTrack(screenTrack);
 
+      // 自分のプレビューに表示
       document.getElementById('local-video').srcObject = screenStream;
       document.getElementById('call-videos').style.display = 'block';
       document.getElementById('screen-share-banner').style.display = 'block';
       document.getElementById('call-avatar').style.display = 'none';
       isSharingScreen = true;
 
-      // 共有停止されたとき自動解除
-      screenTrack.onended = () => {
-        if (isSharingScreen) toggleScreenShare();
-      };
+      // ユーザーがOSの停止ボタンで止めたとき自動解除
+      screenTrack.onended = () => { if (isSharingScreen) toggleScreenShare(); };
       if (callDocRef) updateDoc(callDocRef, { isSharing: true });
+
     } else {
-      // 画面共有停止
-      if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
-      // ビデオが有効なら戻す
+      // 画面共有停止 → senderをnullに戻す（映像を止める）
       const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-      if (isVideoOn && localStream) {
-        const vt = localStream.getVideoTracks()[0];
-        if (sender && vt) sender.replaceTrack(vt);
-        document.getElementById('local-video').srcObject = localStream;
-      } else {
-        document.getElementById('call-videos').style.display = 'none';
-        document.getElementById('call-avatar').style.display = 'flex';
-      }
+      if (sender) await sender.replaceTrack(null);
+      if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+
+      document.getElementById('local-video').srcObject = null;
+      document.getElementById('call-videos').style.display = 'none';
+      document.getElementById('call-avatar').style.display = 'flex';
       document.getElementById('screen-share-banner').style.display = 'none';
       isSharingScreen = false;
       if (callDocRef) updateDoc(callDocRef, { isSharing: false });
