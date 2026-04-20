@@ -206,10 +206,13 @@
     #call-overlay {
       position: fixed; inset: 0; z-index: 20000;
       background: linear-gradient(160deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
-      display: none; flex-direction: column; align-items: center; justify-content: space-between;
-      padding: 48px 24px 36px; color: white;
+      display: none; flex-direction: column; align-items: stretch; justify-content: flex-start;
+      color: white;
     }
     #call-overlay.active { display: flex; }
+    #call-chat-messages .cc-msg-me { align-self:flex-end; background:rgba(0,132,255,0.5); color:white; border-radius:14px 14px 2px 14px; padding:6px 10px; font-size:12px; max-width:80%; word-break:break-word; }
+    #call-chat-messages .cc-msg-other { align-self:flex-start; background:rgba(255,255,255,0.15); color:white; border-radius:14px 14px 14px 2px; padding:6px 10px; font-size:12px; max-width:80%; word-break:break-word; }
+    #call-chat-messages .cc-name { font-size:10px; color:rgba(255,255,255,0.5); margin-bottom:2px; }
     .call-top { text-align: center; }
     .call-avatar {
       width: 100px; height: 100px; border-radius: 50%;
@@ -422,33 +425,56 @@
 
 <!-- 通話オーバーレイ -->
 <div id="call-overlay">
-  <div class="call-top">
-    <div class="call-avatar ringing" id="call-avatar">👤</div>
-    <div class="call-name" id="call-peer-name"></div>
-    <div class="call-status" id="call-status">接続中…</div>
-    <div class="call-timer" id="call-timer">0:00</div>
-  </div>
+  <div style="display:flex; width:100%; height:100%; gap:0; flex-direction:column;">
 
-  <div id="call-videos">
-    <video id="remote-video" autoplay playsinline></video>
-    <video id="local-video" autoplay playsinline muted></video>
-  </div>
-  <div id="screen-share-banner">🖥️ 画面共有中</div>
+    <!-- 上部: 通話メイン -->
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:32px 24px 16px;">
+      <div class="call-top">
+        <div class="call-avatar ringing" id="call-avatar">👤</div>
+        <div class="call-name" id="call-peer-name"></div>
+        <div class="call-status" id="call-status">接続中…</div>
+        <div class="call-timer" id="call-timer">0:00</div>
+      </div>
 
-  <div class="call-controls">
-    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-      <button class="call-btn gray" id="btn-mute" onclick="toggleMute()" title="ミュート">🎤<span class="lbl">ミュート</span></button>
+      <div id="call-videos">
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay playsinline muted></video>
+      </div>
+      <div id="screen-share-banner">🖥️ 画面共有中</div>
+
+      <div class="call-controls">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <button class="call-btn gray" id="btn-mute" onclick="toggleMute()" title="ミュート">🎤<span class="lbl">ミュート</span></button>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <button class="call-btn gray" id="btn-speaker" onclick="toggleSpeaker()" title="スピーカー">🔊<span class="lbl">スピーカー</span></button>
+        </div>
+        <button class="call-btn red large" onclick="hangUp()" title="終話">📵</button>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <button class="call-btn gray" id="btn-video" onclick="toggleVideo()" title="ビデオ">📹<span class="lbl">ビデオ</span></button>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <button class="call-btn gray" id="btn-screen" onclick="toggleScreenShare()" title="画面共有">🖥️<span class="lbl">共有</span></button>
+        </div>
+        <!-- チャット開閉ボタン -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <button class="call-btn gray" id="btn-call-chat" onclick="toggleCallChat()" title="チャット">💬<span class="lbl">チャット</span></button>
+        </div>
+      </div>
     </div>
-    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-      <button class="call-btn gray" id="btn-speaker" onclick="toggleSpeaker()" title="スピーカー">🔊<span class="lbl">スピーカー</span></button>
+
+    <!-- 下部: 通話中チャット -->
+    <div id="call-chat-panel" style="display:none; flex-direction:column; background:rgba(0,0,0,0.6); border-top:1px solid rgba(255,255,255,0.15); height:260px; width:100%;">
+      <div style="font-size:11px; color:#aaa; padding:6px 12px; border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0;">💬 通話中チャット</div>
+      <div id="call-chat-messages" style="flex:1; overflow-y:auto; padding:8px 12px; display:flex; flex-direction:column; gap:6px;"></div>
+      <div style="display:flex; gap:6px; padding:8px 12px; border-top:1px solid rgba(255,255,255,0.1); flex-shrink:0;">
+        <input id="call-chat-input" type="text" placeholder="メッセージを入力…"
+          style="flex:1; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; border-radius:20px; padding:8px 14px; font-size:13px; outline:none;"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){sendCallChat();event.preventDefault();}">
+        <button onclick="sendCallChat()" style="background:#0084ff; color:white; border:none; border-radius:20px; padding:8px 16px; font-size:13px; font-weight:bold; cursor:pointer;">送信</button>
+      </div>
     </div>
-    <button class="call-btn red large" onclick="hangUp()" title="終話">📵</button>
-    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-      <button class="call-btn gray" id="btn-video" onclick="toggleVideo()" title="ビデオ">📹<span class="lbl">ビデオ</span></button>
-    </div>
-    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-      <button class="call-btn gray" id="btn-screen" onclick="toggleScreenShare()" title="画面共有">🖥️<span class="lbl">共有</span></button>
-    </div>
+
   </div>
 </div>
 
@@ -1455,6 +1481,7 @@
     });
 
     showCallOverlay(curCallPeerName, '呼び出し中…', true);
+    startCallChatListener(curRoom);
   };
 
   // ─── 着信受信リスナー ────────────────────────────────
@@ -1536,6 +1563,7 @@
     });
 
     showCallOverlay(callerName, '接続中…', false);
+    startCallChatListener(rid);
     incomingCallData = null;
   };
 
@@ -1565,11 +1593,82 @@
     }
   }
 
+  // ─── 通話中チャット ────────────────────────────────────
+
+  let callChatUnsub = null;
+  let isCallChatOpen = false;
+
+  window.toggleCallChat = () => {
+    isCallChatOpen = !isCallChatOpen;
+    const panel = document.getElementById('call-chat-panel');
+    panel.style.display = isCallChatOpen ? 'flex' : 'none';
+    document.getElementById('btn-call-chat').classList.toggle('active', isCallChatOpen);
+    if (isCallChatOpen) {
+      document.getElementById('call-chat-input').focus();
+      // 既読マーク
+      const msgs = document.getElementById('call-chat-messages');
+      msgs.querySelectorAll('.cc-unread').forEach(el => el.classList.remove('cc-unread'));
+    }
+  };
+
+  function startCallChatListener(roomId) {
+    if (callChatUnsub) callChatUnsub();
+    const chatRef = collection(db, 'calls', roomId, 'chat');
+    callChatUnsub = onSnapshot(query(chatRef, orderBy('createdAt')), snap => {
+      const msgs = document.getElementById('call-chat-messages');
+      snap.docChanges().forEach(change => {
+        if (change.type !== 'added') return;
+        const d = change.doc.data();
+        const isMe = d.uid === curUser.uid;
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.alignItems = isMe ? 'flex-end' : 'flex-start';
+        div.innerHTML = `
+          <div class="cc-name">${isMe ? '' : d.name}</div>
+          <div class="${isMe ? 'cc-msg-me' : 'cc-msg-other'}">${d.text.replace(/</g,'&lt;')}</div>
+        `;
+        msgs.appendChild(div);
+        msgs.scrollTop = msgs.scrollHeight;
+        // チャット未開時に未読通知
+        if (!isCallChatOpen && !isMe) {
+          const btn = document.getElementById('btn-call-chat');
+          btn.innerHTML = '💬<span class="lbl" style="color:#ff0;">未読</span>';
+        }
+      });
+    });
+  }
+
+  function stopCallChatListener() {
+    if (callChatUnsub) { callChatUnsub(); callChatUnsub = null; }
+    isCallChatOpen = false;
+    document.getElementById('call-chat-panel').style.display = 'none';
+    document.getElementById('call-chat-messages').innerHTML = '';
+    document.getElementById('call-chat-input').value = '';
+    const btn = document.getElementById('btn-call-chat');
+    if (btn) btn.innerHTML = '💬<span class="lbl">チャット</span>';
+  }
+
+  window.sendCallChat = async () => {
+    const input = document.getElementById('call-chat-input');
+    const text = input.value.trim();
+    if (!text || !callDocRef) return;
+    input.value = '';
+    const roomId = callDocRef.id;
+    await addDoc(collection(db, 'calls', roomId, 'chat'), {
+      uid: curUser.uid,
+      name: curUser.displayName,
+      text,
+      createdAt: serverTimestamp()
+    });
+  };
+
   // ─── 電話を切る ─────────────────────────────────────
 
   window.hangUp = async (silent = false, msg = null) => {
     if (callUnsub) { callUnsub(); callUnsub = null; }
     if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
+    stopCallChatListener();
     if (pc) { pc.close(); pc = null; }
     if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
     if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
@@ -1670,9 +1769,16 @@
       const screenTrack = screenStream.getVideoTracks()[0];
       const sender = pc.getSenders().find(s => s.track?.kind === 'video');
       if (sender) {
-        sender.replaceTrack(screenTrack);
+        await sender.replaceTrack(screenTrack);
       } else {
-        pc.addTrack(screenTrack, screenStream);
+        // senderがない場合はlocalStreamに紐付けて追加（相手のontrackで受け取れるように）
+        pc.addTrack(screenTrack, localStream || screenStream);
+        // offer/answerを再ネゴシエーション
+        if (pc.signalingState === 'stable' && callDocRef) {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          await updateDoc(callDocRef, { offer: { type: offer.type, sdp: offer.sdp }, renegotiate: Date.now() });
+        }
       }
 
       document.getElementById('local-video').srcObject = screenStream;
