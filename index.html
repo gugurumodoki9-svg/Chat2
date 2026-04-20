@@ -1433,14 +1433,19 @@
 
     pc = new RTCPeerConnection(ICE_SERVERS);
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    // videoトラックを最初からSDPに含める（画面共有時にreplaceTrackだけで映像が届くようにする）
+    // 発信側だけvideoトランシーバーを追加してSDPにvideo枠を作る
     pc.addTransceiver('video', { direction: 'sendrecv' });
 
+    // 相手の映像を受け取ったらremote-videoに表示
+    const remoteStream = new MediaStream();
+    document.getElementById('remote-video').srcObject = remoteStream;
     pc.ontrack = e => {
+      remoteStream.addTrack(e.track);
       if (e.track.kind === 'video') {
-        document.getElementById('remote-video').srcObject = e.streams[0] || new MediaStream([e.track]);
-        document.getElementById('call-videos').style.display = 'block';
-        document.getElementById('call-avatar').style.display = 'none';
+        e.track.onunmute = () => {
+          document.getElementById('call-videos').style.display = 'block';
+          document.getElementById('call-avatar').style.display = 'none';
+        };
       }
     };
 
@@ -1531,14 +1536,18 @@
 
     pc = new RTCPeerConnection(ICE_SERVERS);
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    // videoトラックを最初からSDPに含める（画面共有時にreplaceTrackだけで映像が届くようにする）
-    pc.addTransceiver('video', { direction: 'sendrecv' });
+    // 受信側はofferに従うだけ。addTransceiverは不要
 
+    // 相手の映像を受け取ったらremote-videoに表示
+    const remoteStream = new MediaStream();
+    document.getElementById('remote-video').srcObject = remoteStream;
     pc.ontrack = e => {
+      remoteStream.addTrack(e.track);
       if (e.track.kind === 'video') {
-        document.getElementById('remote-video').srcObject = e.streams[0] || new MediaStream([e.track]);
-        document.getElementById('call-videos').style.display = 'block';
-        document.getElementById('call-avatar').style.display = 'none';
+        e.track.onunmute = () => {
+          document.getElementById('call-videos').style.display = 'block';
+          document.getElementById('call-avatar').style.display = 'none';
+        };
       }
     };
 
@@ -1779,13 +1788,15 @@
       } catch(e) { return; } // キャンセル
 
       const screenTrack = screenStream.getVideoTracks()[0];
-      // addTransceiverで確立済みのvideo senderにreplaceTrackするだけで再ネゴシエーション不要
+      // addTransceiverで確立済みのvideo sender（track=nullも含む）を取得
       const sender = pc.getSenders().find(s => s.track?.kind === 'video' || s.track === null);
       if (!sender) {
         alert('画面共有に対応していない接続状態です。一度通話を切り直してください。');
         screenStream.getTracks().forEach(t => t.stop()); screenStream = null; return;
       }
       await sender.replaceTrack(screenTrack);
+      // 相手側でonunmuteが発火するようtrackを有効化
+      screenTrack.enabled = true;
 
       // 自分のプレビューに表示
       document.getElementById('local-video').srcObject = screenStream;
