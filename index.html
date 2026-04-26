@@ -581,7 +581,7 @@
     if (el) el.innerHTML = sysLogs.map(l => `<div>${l}</div>`).join('');
   }
 
-  let curUser = null, curRoom = null, unsubMsg = null, replyTo = null;
+  let curUser = null, curRoom = null, unsubMsg = null, replyTo = null; // replyTo = { name, text }
   let isAdmin = false, isTestUser = false;
   let unreadCounts = {};
   let hasNewMsg = {};
@@ -1007,7 +1007,16 @@
         const isNew = lastRead && msgDate && msgDate > lastRead && !isMe;
         if (isNew && !newLineInserted) { newLineInserted = true; box.innerHTML += `<div class="new-msg-marker">🆕 ここから新着メッセージ</div>`; }
         let text = m.text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
-        text = text.replace(/【返信: (.*?)】/g, '<span style="color:var(--primary);font-size:12px;display:block;">↩️ $1への返信</span>');
+        text = text.replace(/【返信: (.*?) \| (.*?)】/g,
+          '<div style="border-left:3px solid var(--primary);padding:4px 8px;margin-bottom:6px;background:rgba(0,132,255,0.06);border-radius:0 6px 6px 0;">' +
+          '<div style="font-size:11px;color:var(--primary);font-weight:bold;">↩️ $1 への返信</div>' +
+          '<div style="font-size:12px;color:#666;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">$2</div>' +
+          '</div>');
+        // 旧フォーマット（名前のみ）との後方互換
+        text = text.replace(/【返信: (.*?)】/g,
+          '<div style="border-left:3px solid var(--primary);padding:4px 8px;margin-bottom:6px;background:rgba(0,132,255,0.06);border-radius:0 6px 6px 0;">' +
+          '<div style="font-size:11px;color:var(--primary);font-weight:bold;">↩️ $1 への返信</div>' +
+          '</div>');
         box.innerHTML += `<div class="msg-container">
           <div class="msg-wrapper ${isMe?'my-wrapper':'other-wrapper'}${isNew?' is-new':''}"
                ondblclick='showMenu("${d.id}",${JSON.stringify(m).replace(/"/g,'&quot;')},${isMe})'>
@@ -1026,8 +1035,15 @@
   window.showMenu = (mid, data, isMe) => {
     document.getElementById('action-menu').style.display = 'flex';
     document.getElementById('act-reply').onclick = () => {
-      replyTo = data.senderName;
-      document.getElementById('reply-preview').innerText = `↩️ ${data.senderName} への返信準備中`;
+      // 返信元テキスト（長すぎたら省略）
+      const replyText = data.text.replace(/【返信:.*?】\n?/g, '').trim();
+      const shortText = replyText.length > 7 ? replyText.substring(0, 7) + '…' : replyText;
+      replyTo = { name: data.senderName, text: shortText };
+      document.getElementById('reply-preview').innerHTML =
+        `<div style="border-left:3px solid var(--primary); padding-left:8px;">` +
+        `<div style="font-size:11px; color:var(--primary); font-weight:bold;">↩️ ${data.senderName} への返信</div>` +
+        `<div style="font-size:12px; color:#555; margin-top:2px;">${shortText}</div>` +
+        `</div>`;
       document.getElementById('reply-preview').style.display = 'block';
       hideActionMenu();
     };
@@ -1080,7 +1096,7 @@
   async function sendMessage() {
     const inp = document.getElementById('msg-input');
     if (!inp.value.trim() || !curRoom) return;
-    const msg = replyTo ? `【返信: ${replyTo}】\n${inp.value}` : inp.value;
+    const msg = replyTo ? `【返信: ${replyTo.name} | ${replyTo.text}】\n${inp.value}` : inp.value;
     await addDoc(collection(db, "rooms", curRoom, "messages"), {
       text: msg, senderId: curUser.uid, senderName: curUser.displayName, createdAt: serverTimestamp()
     });
@@ -1096,7 +1112,7 @@
       }
     }
     devLog(`送信: [${curRoom}] ${curUser.displayName}: ${msg.substring(0,40)}`);
-    inp.value = ""; replyTo = null;
+    inp.value = ""; replyTo = null; document.getElementById('reply-preview').innerHTML = '';
     document.getElementById('reply-preview').style.display = 'none';
   }
 
