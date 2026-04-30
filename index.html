@@ -1478,6 +1478,13 @@
       if (data.status === 'connected') {
         document.getElementById('share-status-text').textContent = '✅ 共有中';
         document.getElementById('screen-share-banner').style.display = 'block';
+        // 共有者側は自分の画面を映像として表示する
+        document.getElementById('share-waiting').style.display = 'none';
+        const selfVideo = document.getElementById('remote-video');
+        selfVideo.srcObject = screenStream;
+        selfVideo.muted = true;
+        selfVideo.play().catch(() => {});
+        document.getElementById('share-view').style.display = 'block';
         devLog('画面共有：接続確立');
       }
     });
@@ -1530,10 +1537,24 @@
 
     // 映像を受け取ったら表示
     const remoteStream = new MediaStream();
-    document.getElementById('remote-video').srcObject = remoteStream;
+    const remoteVideo = document.getElementById('remote-video');
+    remoteVideo.srcObject = remoteStream;
     pc.ontrack = e => {
       remoteStream.addTrack(e.track);
-      if (e.track.kind === 'video') {
+    };
+    // ICE接続が確立したら映像エリアへ切り替え
+    pc.oniceconnectionstatechange = () => {
+      devLog('ICE state: ' + pc.iceConnectionState);
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        remoteVideo.play().catch(() => {});
+        document.getElementById('share-waiting').style.display = 'none';
+        document.getElementById('share-view').style.display = 'block';
+        document.getElementById('screen-share-banner').style.display = 'block';
+      }
+    };
+    // ontrack後にvideoが再生できた時点でも切り替え（バックアップ）
+    remoteVideo.oncanplay = () => {
+      if (document.getElementById('share-waiting').style.display !== 'none') {
         document.getElementById('share-waiting').style.display = 'none';
         document.getElementById('share-view').style.display = 'block';
         document.getElementById('screen-share-banner').style.display = 'block';
