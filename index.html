@@ -118,7 +118,7 @@
       background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
       display: none; gap: 10px; padding: 12px 20px; z-index: 10002;
     }
-    .locked { pointer-events: none; opacity: 0.5; filter: grayscale(1); }
+    .locked { opacity: 0.5; filter: grayscale(1); user-select: none; cursor: not-allowed; }
     #notif-banner {
       position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
       background: #222; color: white; padding: 12px 20px; border-radius: 30px;
@@ -206,9 +206,14 @@
     #call-overlay {
       position: fixed; inset: 0; z-index: 20000;
       background: #0a0a0a;
-      display: none; flex-direction: column; color: white;
+      display: none; flex-direction: row; color: white;
     }
     #call-overlay.active { display: flex; }
+
+    /* 左側：映像エリア全体 */
+    #share-main {
+      flex: 1; display: flex; flex-direction: column; min-width: 0;
+    }
 
     /* 共有者側：待機画面 */
     #share-waiting {
@@ -238,12 +243,12 @@
       position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
       background: rgba(0,0,0,0.6); color: #4ade80;
       font-size: 12px; font-weight: bold; border-radius: 20px;
-      padding: 4px 14px; pointer-events: none; display: none;
+      padding: 4px 14px; display: none;
     }
 
     /* 操作バー */
     #share-controls {
-      background: #111; padding: 14px 20px;
+      background: #111; padding: 10px 16px;
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
       flex-shrink: 0;
     }
@@ -253,6 +258,41 @@
       border-radius: 20px; padding: 8px 22px; font-size: 14px;
       font-weight: bold; cursor: pointer;
     }
+
+    /* ── 画面共有中チャットパネル（右側） ── */
+    #share-chat-panel {
+      width: 320px; flex-shrink: 0;
+      background: #1a1a1a; border-left: 1px solid #333;
+      display: flex; flex-direction: column;
+    }
+    #share-chat-header {
+      padding: 10px 14px; background: #222; border-bottom: 1px solid #333;
+      font-size: 13px; font-weight: bold; color: #ddd; flex-shrink: 0;
+    }
+    #share-chat-messages {
+      flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;
+    }
+    #share-chat-messages::-webkit-scrollbar { width: 4px; }
+    #share-chat-messages::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+    .share-msg-me { align-self: flex-end; background: #1a4a1a; color: #ddd; border-radius: 12px 12px 2px 12px; padding: 7px 11px; max-width: 85%; font-size: 13px; word-break: break-word; }
+    .share-msg-other { align-self: flex-start; background: #2a2a2a; color: #ddd; border-radius: 12px 12px 12px 2px; padding: 7px 11px; max-width: 85%; font-size: 13px; word-break: break-word; }
+    .share-msg-name { font-size: 10px; color: #888; margin-bottom: 3px; }
+    #share-chat-input-area {
+      padding: 10px; background: #222; border-top: 1px solid #333; flex-shrink: 0;
+      display: flex; gap: 6px; align-items: center;
+    }
+    #share-chat-input {
+      flex: 1; background: #333; border: 1px solid #444; border-radius: 16px;
+      padding: 8px 12px; color: white; font-size: 13px; outline: none; resize: none;
+      font-family: 'Noto Sans JP', sans-serif;
+    }
+    #share-chat-input::placeholder { color: #666; }
+    #share-chat-send {
+      background: #0084ff; color: white; border: none; border-radius: 50%;
+      width: 34px; height: 34px; font-size: 16px; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+
 
     /* 画面共有リクエストバナー */
     #incoming-call-banner {
@@ -415,23 +455,36 @@
 
 <!-- 画面共有オーバーレイ -->
 <div id="call-overlay">
-  <!-- 共有者側：待機中 -->
-  <div id="share-waiting">
-    <div class="share-icon">🖥️</div>
-    <div class="share-status-text" id="share-status-text">接続待ち…</div>
-    <div class="share-sub-text">相手が受け入れるまで待ってね</div>
+  <!-- 左側：映像メインエリア -->
+  <div id="share-main">
+    <!-- 共有者側：待機中 -->
+    <div id="share-waiting">
+      <div class="share-icon">🖥️</div>
+      <div class="share-status-text" id="share-status-text">接続待ち…</div>
+      <div class="share-sub-text">相手が受け入れるまで待ってね</div>
+    </div>
+    <!-- 視聴者側：映像表示 -->
+    <div id="share-view">
+      <video id="remote-video" autoplay playsinline></video>
+      <div id="screen-share-banner">🖥️ 画面共有中</div>
+    </div>
+    <!-- 操作バー（両者共通） -->
+    <div id="share-controls">
+      <div id="share-controls-info">👤 <span id="share-peer-name"></span></div>
+      <button class="btn-stop-share" onclick="hangUp()">✕ 終了</button>
+    </div>
   </div>
-  <!-- 視聴者側：映像表示 -->
-  <div id="share-view">
-    <video id="remote-video" autoplay playsinline></video>
-    <div id="screen-share-banner">🖥️ 画面共有中</div>
-  </div>
-  <!-- 操作バー（両者共通） -->
-  <div id="share-controls">
-    <div id="share-controls-info">👤 <span id="share-peer-name"></span></div>
-    <button class="btn-stop-share" onclick="hangUp()">✕ 終了</button>
+  <!-- 右側：チャットパネル -->
+  <div id="share-chat-panel">
+    <div id="share-chat-header">💬 チャット</div>
+    <div id="share-chat-messages"></div>
+    <div id="share-chat-input-area">
+      <textarea id="share-chat-input" placeholder="メッセージ..." rows="1"></textarea>
+      <button id="share-chat-send" onclick="sendShareChatMsg()">➤</button>
+    </div>
   </div>
 </div>
+
 
 </div>
 
@@ -635,8 +688,9 @@
 
   // ─── プッシュ通知 ─────────────────────────────────────
 
-  function pushNotif(title, body, onClick) {
-    if (Notification.permission !== 'granted' || !document.hidden) return;
+  function pushNotif(title, body, onClick, force = false) {
+    if (Notification.permission !== 'granted') return;
+    if (!document.hidden && !force) return;
     const n = new Notification(title, { body, icon: 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg' });
     if (onClick) n.onclick = () => { window.focus(); n.close(); onClick(); };
   }
@@ -1485,6 +1539,7 @@
         selfVideo.muted = true;
         selfVideo.play().catch(() => {});
         document.getElementById('share-view').style.display = 'block';
+        startShareChat(curRoom);
         devLog('画面共有：接続確立');
       }
     });
@@ -1517,8 +1572,16 @@
         if (data.status !== 'ringing') return;
         if (pc) return;
         incomingCallData = { rid, ...data };
+        // 画面共有リクエストバナー（DMチャット内）
         document.getElementById('incoming-name').textContent = data.callerName;
         document.getElementById('incoming-call-banner').style.display = 'flex';
+        // ブラウザのネイティブ通知（タブがアクティブでも表示）
+        pushNotif(
+          '🖥️ 画面共有のリクエスト',
+          `${data.callerName} が画面共有を始めたよ！`,
+          () => { incomingCallData && answerScreenShare(); },
+          true  // タブがアクティブでも強制表示
+        );
       });
     });
   }
@@ -1584,6 +1647,9 @@
       if (!data || data.status === 'ended') { hangUp(true); return; }
     });
 
+    // チャットパネル起動
+    startShareChat(rid);
+
     // 視聴者用オーバーレイ
     document.getElementById('call-overlay').classList.add('active');
     document.getElementById('share-waiting').style.display = 'flex';
@@ -1612,6 +1678,9 @@
     document.getElementById('share-waiting').style.display = 'none';
     document.getElementById('share-view').style.display = 'none';
     document.getElementById('screen-share-banner').style.display = 'none';
+    // チャットパネルのリスナーも解除
+    if (window._shareChatUnsub) { window._shareChatUnsub(); window._shareChatUnsub = null; }
+    document.getElementById('share-chat-messages').innerHTML = '';
     if (!silent && callDocRef) {
       try { await updateDoc(callDocRef, { status: 'ended' }); } catch(e) {}
     }
@@ -1620,6 +1689,44 @@
     if (msg) setTimeout(() => alert(msg), 100);
     devLog('画面共有終了');
   };
+
+  // ─── 画面共有中チャットパネル ─────────────────────────
+  function startShareChat(roomId) {
+    if (window._shareChatUnsub) { window._shareChatUnsub(); window._shareChatUnsub = null; }
+    document.getElementById('share-chat-messages').innerHTML = '';
+    window._shareChatUnsub = onSnapshot(
+      query(collection(db, 'rooms', roomId, 'messages'), orderBy('createdAt', 'asc')),
+      snap => {
+        const box = document.getElementById('share-chat-messages');
+        const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+        snap.docChanges().forEach(change => {
+          if (change.type !== 'added') return;
+          const m = change.doc.data();
+          const isMe = m.senderId === curUser.uid;
+          const div = document.createElement('div');
+          div.className = isMe ? 'share-msg-me' : 'share-msg-other';
+          const safeText = m.text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          div.innerHTML = `<div class="share-msg-name">${isMe ? 'あなた' : m.senderName}</div>${safeText}`;
+          box.appendChild(div);
+        });
+        if (wasAtBottom) box.scrollTop = box.scrollHeight;
+      }
+    );
+  }
+
+  window.sendShareChatMsg = async () => {
+    const inp = document.getElementById('share-chat-input');
+    const text = inp.value.trim();
+    if (!text || !curRoom) return;
+    inp.value = '';
+    await addDoc(collection(db, 'rooms', curRoom, 'messages'), {
+      text, senderId: curUser.uid, senderName: curUser.displayName, createdAt: serverTimestamp()
+    });
+  };
+
+  document.getElementById('share-chat-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendShareChatMsg(); }
+  });
 
   window.copyUrl = (url) => {
     navigator.clipboard.writeText(url).then(() => {
