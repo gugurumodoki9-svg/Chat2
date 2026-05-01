@@ -1695,7 +1695,7 @@
     if (window._shareChatUnsub) { window._shareChatUnsub(); window._shareChatUnsub = null; }
     document.getElementById('share-chat-messages').innerHTML = '';
     window._shareChatUnsub = onSnapshot(
-      query(collection(db, 'rooms', roomId, 'messages'), orderBy('createdAt', 'asc')),
+      query(collection(db, 'rooms', roomId, 'shareMessages'), orderBy('createdAt', 'asc')),
       snap => {
         const box = document.getElementById('share-chat-messages');
         const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
@@ -1719,7 +1719,7 @@
     const text = inp.value.trim();
     if (!text || !curRoom) return;
     inp.value = '';
-    await addDoc(collection(db, 'rooms', curRoom, 'messages'), {
+    await addDoc(collection(db, 'rooms', curRoom, 'shareMessages'), {
       text, senderId: curUser.uid, senderName: curUser.displayName, createdAt: serverTimestamp()
     });
   };
