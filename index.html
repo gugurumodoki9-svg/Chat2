@@ -118,7 +118,7 @@
       background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
       display: none; gap: 10px; padding: 12px 20px; z-index: 10002;
     }
-    .locked { opacity: 0.5; filter: grayscale(1); user-select: none; cursor: not-allowed; }
+    .locked { pointer-events: none; opacity: 0.5; filter: grayscale(1); }
     #notif-banner {
       position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
       background: #222; color: white; padding: 12px 20px; border-radius: 30px;
@@ -206,14 +206,9 @@
     #call-overlay {
       position: fixed; inset: 0; z-index: 20000;
       background: #0a0a0a;
-      display: none; flex-direction: row; color: white;
+      display: none; flex-direction: column; color: white;
     }
     #call-overlay.active { display: flex; }
-
-    /* 左側：映像エリア全体 */
-    #share-main {
-      flex: 1; display: flex; flex-direction: column; min-width: 0;
-    }
 
     /* 共有者側：待機画面 */
     #share-waiting {
@@ -243,12 +238,12 @@
       position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
       background: rgba(0,0,0,0.6); color: #4ade80;
       font-size: 12px; font-weight: bold; border-radius: 20px;
-      padding: 4px 14px; display: none;
+      padding: 4px 14px; pointer-events: none; display: none;
     }
 
     /* 操作バー */
     #share-controls {
-      background: #111; padding: 10px 16px;
+      background: #111; padding: 14px 20px;
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
       flex-shrink: 0;
     }
@@ -259,40 +254,30 @@
       font-weight: bold; cursor: pointer;
     }
 
-    /* ── 画面共有中チャットパネル（右側） ── */
-    #share-chat-panel {
-      width: 320px; flex-shrink: 0;
-      background: #1a1a1a; border-left: 1px solid #333;
-      display: flex; flex-direction: column;
+    /* 音声通話UI */
+    #voice-area {
+      display: none; flex-direction: column; align-items: center;
+      justify-content: center; flex: 1; gap: 20px;
     }
-    #share-chat-header {
-      padding: 10px 14px; background: #222; border-bottom: 1px solid #333;
-      font-size: 13px; font-weight: bold; color: #ddd; flex-shrink: 0;
-    }
-    #share-chat-messages {
-      flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;
-    }
-    #share-chat-messages::-webkit-scrollbar { width: 4px; }
-    #share-chat-messages::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
-    .share-msg-me { align-self: flex-end; background: #1a4a1a; color: #ddd; border-radius: 12px 12px 2px 12px; padding: 7px 11px; max-width: 85%; font-size: 13px; word-break: break-word; }
-    .share-msg-other { align-self: flex-start; background: #2a2a2a; color: #ddd; border-radius: 12px 12px 12px 2px; padding: 7px 11px; max-width: 85%; font-size: 13px; word-break: break-word; }
-    .share-msg-name { font-size: 10px; color: #888; margin-bottom: 3px; }
-    #share-chat-input-area {
-      padding: 10px; background: #222; border-top: 1px solid #333; flex-shrink: 0;
-      display: flex; gap: 6px; align-items: center;
-    }
-    #share-chat-input {
-      flex: 1; background: #333; border: 1px solid #444; border-radius: 16px;
-      padding: 8px 12px; color: white; font-size: 13px; outline: none; resize: none;
-      font-family: 'Noto Sans JP', sans-serif;
-    }
-    #share-chat-input::placeholder { color: #666; }
-    #share-chat-send {
-      background: #0084ff; color: white; border: none; border-radius: 50%;
-      width: 34px; height: 34px; font-size: 16px; cursor: pointer; flex-shrink: 0;
+    .voice-avatar {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
       display: flex; align-items: center; justify-content: center;
+      font-size: 40px; animation: sharePulse 1.5s ease-in-out infinite;
     }
-
+    .voice-name { font-size: 22px; font-weight: bold; }
+    .voice-status { font-size: 14px; color: #aaa; }
+    .voice-timer { font-size: 20px; font-weight: bold; color: #4ade80; display: none; }
+    .voice-controls { display: flex; gap: 20px; align-items: center; }
+    .voice-btn {
+      width: 60px; height: 60px; border-radius: 50%; border: none;
+      font-size: 24px; cursor: pointer; transition: 0.2s; display: flex;
+      flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    }
+    .voice-btn span { font-size: 9px; color: white; font-weight: bold; }
+    .voice-btn.gray { background: rgba(255,255,255,0.2); }
+    .voice-btn.gray.muted { background: #ef4444; }
+    .voice-btn.red { background: #ef4444; width: 72px; height: 72px; font-size: 28px; }
 
     /* 画面共有リクエストバナー */
     #incoming-call-banner {
@@ -423,7 +408,8 @@
     <div id="chat-content" style="display:none; flex-direction:column; height:100%;">
       <div style="padding:10px 20px; background:rgba(255,255,255,0.8); border-bottom:1px solid #ddd; font-weight:bold; display:flex; align-items:center; justify-content:space-between;">
         <span>📍 <span id="chat-title"></span></span>
-        <button id="call-btn" onclick="startScreenShare()" style="display:none; background:#0084ff; color:white; border:none; border-radius:20px; padding:6px 16px; font-size:13px; font-weight:bold; cursor:pointer;">🖥️ 画面共有</button>
+        <button id="call-btn-screen" onclick="startScreenShare()" style="display:none; background:#0084ff; color:white; border:none; border-radius:20px; padding:6px 14px; font-size:13px; font-weight:bold; cursor:pointer; margin-right:6px;">🖥️ 画面共有</button>
+        <button id="call-btn-voice" onclick="startVoiceCall()" style="display:none; background:#22c55e; color:white; border:none; border-radius:20px; padding:6px 14px; font-size:13px; font-weight:bold; cursor:pointer;">📞 音声通話</button>
       </div>
       <div id="messages"></div>
       <div class="input-area" id="input-container" style="background:white; padding:15px; border-top:1px solid #ddd;">
@@ -440,51 +426,50 @@
   </div>
 </div>
 
-<!-- 画面共有リクエストバナー -->
+<!-- 着信バナー（画面共有・音声通話共通） -->
 <div id="incoming-call-banner">
   <div class="incoming-avatar" id="incoming-avatar">🖥️</div>
   <div class="incoming-info">
     <div class="incoming-name" id="incoming-name"></div>
-    <div class="incoming-type">🖥️ 画面共有のリクエスト</div>
+    <div class="incoming-type" id="incoming-type">🖥️ 画面共有のリクエスト</div>
   </div>
   <div class="incoming-actions">
-    <button class="btn-answer" onclick="answerScreenShare()">👁️</button>
-    <button class="btn-decline" onclick="declineScreenShare()">✕</button>
+    <button class="btn-answer" id="btn-answer-call" onclick="answerIncoming()">👁️</button>
+    <button class="btn-decline" onclick="declineIncoming()">✕</button>
   </div>
 </div>
 
-<!-- 画面共有オーバーレイ -->
+<!-- 通話・画面共有オーバーレイ -->
 <div id="call-overlay">
-  <!-- 左側：映像メインエリア -->
-  <div id="share-main">
-    <!-- 共有者側：待機中 -->
-    <div id="share-waiting">
-      <div class="share-icon">🖥️</div>
-      <div class="share-status-text" id="share-status-text">接続待ち…</div>
-      <div class="share-sub-text">相手が受け入れるまで待ってね</div>
-    </div>
-    <!-- 視聴者側：映像表示 -->
-    <div id="share-view">
-      <video id="remote-video" autoplay playsinline></video>
-      <div id="screen-share-banner">🖥️ 画面共有中</div>
-    </div>
-    <!-- 操作バー（両者共通） -->
-    <div id="share-controls">
-      <div id="share-controls-info">👤 <span id="share-peer-name"></span></div>
-      <button class="btn-stop-share" onclick="hangUp()">✕ 終了</button>
+  <!-- 共有者側：待機中 -->
+  <div id="share-waiting">
+    <div class="share-icon">🖥️</div>
+    <div class="share-status-text" id="share-status-text">接続待ち…</div>
+    <div class="share-sub-text">相手が受け入れるまで待ってね</div>
+  </div>
+  <!-- 視聴者側：映像表示 -->
+  <div id="share-view">
+    <video id="remote-video" autoplay playsinline></video>
+    <div id="screen-share-banner">🖥️ 画面共有中</div>
+  </div>
+  <!-- 音声通話エリア -->
+  <div id="voice-area">
+    <div class="voice-avatar" id="voice-avatar">👤</div>
+    <div class="voice-name" id="voice-peer-name"></div>
+    <div class="voice-status" id="voice-status">接続中…</div>
+    <div class="voice-timer" id="voice-timer">0:00</div>
+    <div class="voice-controls">
+      <button class="voice-btn gray" id="btn-mute" onclick="toggleMute()" title="ミュート">🎤<span>ミュート</span></button>
+      <button class="voice-btn red" onclick="hangUp()" title="終了">📵</button>
+      <button class="voice-btn gray" id="btn-speaker" onclick="toggleSpeaker()" title="スピーカー">🔊<span>スピーカー</span></button>
     </div>
   </div>
-  <!-- 右側：チャットパネル -->
-  <div id="share-chat-panel">
-    <div id="share-chat-header">💬 チャット</div>
-    <div id="share-chat-messages"></div>
-    <div id="share-chat-input-area">
-      <textarea id="share-chat-input" placeholder="メッセージ..." rows="1"></textarea>
-      <button id="share-chat-send" onclick="sendShareChatMsg()">➤</button>
-    </div>
+  <!-- 操作バー（画面共有時） -->
+  <div id="share-controls">
+    <div id="share-controls-info">👤 <span id="share-peer-name"></span></div>
+    <button class="btn-stop-share" onclick="hangUp()">✕ 終了</button>
   </div>
 </div>
-
 
 </div>
 
@@ -688,9 +673,8 @@
 
   // ─── プッシュ通知 ─────────────────────────────────────
 
-  function pushNotif(title, body, onClick, force = false) {
-    if (Notification.permission !== 'granted') return;
-    if (!document.hidden && !force) return;
+  function pushNotif(title, body, onClick) {
+    if (Notification.permission !== 'granted' || !document.hidden) return;
     const n = new Notification(title, { body, icon: 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg' });
     if (onClick) n.onclick = () => { window.focus(); n.close(); onClick(); };
   }
@@ -1042,7 +1026,8 @@
     document.getElementById('chat-title').innerText = title;
     document.getElementById('chat-content').style.display = 'flex';
     // グローバルチャット以外では通話ボタンを表示
-    document.getElementById('call-btn').style.display = 'inline-block';
+    document.getElementById('call-btn-screen').style.display = 'inline-block';
+      document.getElementById('call-btn-voice').style.display = 'inline-block';
     curCallPeerName = title;
     initApp();
     deleteOldMessages(rid).then(() => loadMessages(rid));
@@ -1077,7 +1062,7 @@
             <div class="msg-info-inner"><span>${m.senderName}</span><span class="msg-datetime">${dateStr}</span></div>
             <div style="white-space:pre-wrap;">${text}</div>
             ${m.imageUrl ? `<img src="${m.imageUrl}" style="max-width:100%;border-radius:10px;margin-top:5px;">` : ""}
-            ${m.fileUrl ? `<div style="margin-top:6px;"><a href="${m.fileUrl}" download="${m.fileName}" style="display:inline-flex;align-items:center;gap:8px;background:#f0f2f5;border:1px solid #ddd;border-radius:10px;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;"><span style="font-size:20px;">${getFileIcon(m.fileName)}</span><div><div style="font-weight:bold;word-break:break-all;">${m.fileName}</div><div style="font-size:11px;color:#888;">${m.fileSize || ''}</div></div></a></div>` : ""}
+            ${m.fileUrl ? buildFileCard(m.fileUrl, m.fileName, m.fileSize) : ""}
           </div>
         </div>`;
       });
@@ -1199,6 +1184,25 @@
   };
 
   // ファイルの種類に応じたアイコンを返す
+  function buildFileCard(url, name, size) {
+    const icon = getFileIcon(name);
+    const safeName = (name || 'ファイル').replace(/"/g, '&quot;');
+    const safeSize = (size || '').replace(/"/g, '&quot;');
+    return `<div style="margin-top:6px;">
+      <a href="${url}" download="${safeName}"
+         style="display:inline-flex;align-items:center;gap:10px;
+                background:#f8f9fa;border:1px solid #ddd;border-radius:12px;
+                padding:10px 14px;text-decoration:none;color:#333;
+                font-size:13px;max-width:220px;cursor:pointer;">
+        <span style="font-size:26px;flex-shrink:0;">${icon}</span>
+        <div style="min-width:0;">
+          <div style="font-weight:bold;word-break:break-all;font-size:12px;">${safeName}</div>
+          <div style="font-size:11px;color:#888;margin-top:2px;">${safeSize} · クリックでDL</div>
+        </div>
+      </a>
+    </div>`;
+  }
+
   function getFileIcon(name) {
     if (!name) return '📄';
     const ext = name.split('.').pop().toLowerCase();
@@ -1459,7 +1463,7 @@
 
 
   // ═══════════════════════════════════════════════════════
-  //  WebRTC 画面共有システム（音声なし・画面共有専用）
+  //  WebRTC 通話システム（音声通話 + 画面共有）
   // ═══════════════════════════════════════════════════════
 
   const ICE_SERVERS = { iceServers: [
@@ -1469,20 +1473,53 @@
 
   let pc = null;
   let screenStream = null;
+  let localAudioStream = null;
   let callDocRef = null;
   let callUnsub = null;
   let isCaller = false;
+  let callType = null; // 'screen' | 'voice'
   let incomingCallData = null;
   let callListenerUnsub = null;
+  let voiceTimerInterval = null;
+  let isMuted = false;
+  let isSpeakerOff = false;
+
+  // ─── 共通：PC初期化・クリーンアップ ─────────────────
+  async function cleanupCall(silent) {
+    if (voiceTimerInterval) { clearInterval(voiceTimerInterval); voiceTimerInterval = null; }
+    if (callUnsub) { callUnsub(); callUnsub = null; }
+    if (pc) { pc.close(); pc = null; }
+    if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+    if (localAudioStream) { localAudioStream.getTracks().forEach(t => t.stop()); localAudioStream = null; }
+    document.getElementById('remote-video').srcObject = null;
+    const audioEl = document.getElementById('remote-audio');
+    if (audioEl) audioEl.srcObject = null;
+    document.getElementById('call-overlay').classList.remove('active');
+    document.getElementById('share-waiting').style.display = 'none';
+    document.getElementById('share-view').style.display = 'none';
+    document.getElementById('share-controls').style.display = 'none';
+    document.getElementById('voice-area').style.display = 'none';
+    document.getElementById('screen-share-banner').style.display = 'none';
+    document.getElementById('voice-timer').style.display = 'none';
+    document.getElementById('voice-timer').textContent = '0:00';
+    isMuted = false; isSpeakerOff = false; callType = null;
+    if (!silent && callDocRef) {
+      try { await updateDoc(callDocRef, { status: 'ended' }); } catch(e) {}
+    }
+    callDocRef = null; isCaller = false;
+  }
+
+  window.hangUp = async (silent = false, msg = null) => {
+    await cleanupCall(silent);
+    if (msg) setTimeout(() => alert(msg), 100);
+    devLog('通話終了');
+  };
 
   // ─── 画面共有開始（共有者側） ─────────────────────────
   window.startScreenShare = async () => {
     if (!curRoom || curRoom === 'global') return;
+    if (pc) await cleanupCall(true);
 
-    // 既存の接続を必ずリセットしてから再開（2人目問題の修正）
-    if (pc) await hangUp(true);
-
-    // 画面キャプチャ取得（音声なし）
     let captureStream;
     try {
       captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
@@ -1492,72 +1529,102 @@
     }
 
     screenStream = captureStream;
+    callType = 'screen';
     isCaller = true;
-
-    pc = new RTCPeerConnection(ICE_SERVERS);
+    await setupCallerPC('screen');
     screenStream.getTracks().forEach(t => pc.addTrack(t, screenStream));
-    // OSの停止ボタンで止めたときも終了
     screenStream.getVideoTracks()[0].onended = () => hangUp();
 
+    await sendOffer('screen');
+
+    // 共有者UI
+    document.getElementById('call-overlay').classList.add('active');
+    document.getElementById('share-waiting').style.display = 'flex';
+    document.getElementById('share-view').style.display = 'none';
+    document.getElementById('share-controls').style.display = 'flex';
+    document.getElementById('voice-area').style.display = 'none';
+    document.getElementById('share-status-text').textContent = '接続待ち…';
+    document.getElementById('share-peer-name').textContent = curUser.displayName + ' が共有中';
+    devLog('画面共有を開始');
+  };
+
+  // ─── 音声通話開始（発信者側） ─────────────────────────
+  window.startVoiceCall = async () => {
+    if (!curRoom || curRoom === 'global') return;
+    if (pc) await cleanupCall(true);
+
+    try {
+      localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch(e) {
+      alert('マイクへのアクセスが許可されていないよ'); return;
+    }
+
+    callType = 'voice';
+    isCaller = true;
+    await setupCallerPC('voice');
+    localAudioStream.getTracks().forEach(t => pc.addTrack(t, localAudioStream));
+
+    await sendOffer('voice');
+    showVoiceUI('発信中…', document.getElementById('chat-title')?.textContent?.replace('📍 ','') || '');
+    devLog('音声通話を開始');
+  };
+
+  // ─── 共通：発信者PC設定 ───────────────────────────────
+  async function setupCallerPC(type) {
+    pc = new RTCPeerConnection(ICE_SERVERS);
     callDocRef = doc(db, 'calls', curRoom);
     pc.onicecandidate = async e => {
       if (e.candidate) await addDoc(collection(db, 'calls', curRoom, 'callerCandidates'), e.candidate.toJSON());
     };
-
-    // 古いシグナリングデータを削除してから書き込み
+    // 受信トラック（音声通話の相手音声）
+    pc.ontrack = e => {
+      if (type === 'voice') {
+        let audio = document.getElementById('remote-audio');
+        if (!audio) { audio = document.createElement('audio'); audio.id = 'remote-audio'; audio.autoplay = true; document.body.appendChild(audio); }
+        audio.srcObject = e.streams[0];
+      }
+    };
+    // 古いICE候補削除
     try {
-      const oldCands = await getDocs(collection(db, 'calls', curRoom, 'callerCandidates'));
-      oldCands.forEach(d => deleteDoc(d.ref));
-      const oldAns = await getDocs(collection(db, 'calls', curRoom, 'answerCandidates'));
-      oldAns.forEach(d => deleteDoc(d.ref));
+      const old1 = await getDocs(collection(db, 'calls', curRoom, 'callerCandidates'));
+      old1.forEach(d => deleteDoc(d.ref));
+      const old2 = await getDocs(collection(db, 'calls', curRoom, 'answerCandidates'));
+      old2.forEach(d => deleteDoc(d.ref));
     } catch(e) {}
+  }
 
+  async function sendOffer(type) {
     await setDoc(callDocRef, {
       callerId: curUser.uid, callerName: curUser.displayName,
-      status: 'ringing', type: 'screen', createdAt: serverTimestamp()
+      status: 'ringing', type, createdAt: serverTimestamp()
     });
-
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     await updateDoc(callDocRef, { offer: { type: offer.type, sdp: offer.sdp } });
 
-    // 相手の応答を待つ
     callUnsub = onSnapshot(callDocRef, async snap => {
-      const data = snap.data();
-      if (!data) return;
-      if (data.status === 'declined') { hangUp(true, '画面共有が拒否されたよ'); return; }
+      const data = snap.data(); if (!data) return;
+      if (data.status === 'declined') { hangUp(true, '通話が拒否されたよ'); return; }
       if (data.answer && pc && pc.signalingState === 'have-local-offer') {
         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
       }
       if (data.status === 'connected') {
-        document.getElementById('share-status-text').textContent = '✅ 共有中';
-        document.getElementById('screen-share-banner').style.display = 'block';
-        // 共有者側は自分の画面を映像として表示する
-        document.getElementById('share-waiting').style.display = 'none';
-        const selfVideo = document.getElementById('remote-video');
-        selfVideo.srcObject = screenStream;
-        selfVideo.muted = true;
-        selfVideo.play().catch(() => {});
-        document.getElementById('share-view').style.display = 'block';
-        startShareChat(curRoom);
-        devLog('画面共有：接続確立');
+        if (callType === 'screen') {
+          document.getElementById('share-status-text').textContent = '✅ 共有中';
+        } else {
+          document.getElementById('voice-status').textContent = '通話中';
+          startVoiceTimer();
+        }
+        devLog('接続確立: ' + callType);
       }
+      if (data.status === 'ended') hangUp(true);
     });
-
     onSnapshot(collection(db, 'calls', curRoom, 'answerCandidates'), snap => {
-      snap.docChanges().forEach(async change => {
-        if (change.type === 'added') { try { await pc.addIceCandidate(new RTCIceCandidate(change.doc.data())); } catch(e) {} }
+      snap.docChanges().forEach(async c => {
+        if (c.type === 'added') { try { await pc.addIceCandidate(new RTCIceCandidate(c.doc.data())); } catch(e) {} }
       });
     });
-
-    // 共有者用オーバーレイ表示
-    document.getElementById('call-overlay').classList.add('active');
-    document.getElementById('share-waiting').style.display = 'flex';
-    document.getElementById('share-view').style.display = 'none';
-    document.getElementById('share-status-text').textContent = '接続待ち…';
-    document.getElementById('share-peer-name').textContent = curUser.displayName + ' が共有中';
-    devLog('画面共有を開始: ' + curRoom);
-  };
+  }
 
   // ─── 着信リスナー ─────────────────────────────────────
   function startCallListener() {
@@ -1572,161 +1639,138 @@
         if (data.status !== 'ringing') return;
         if (pc) return;
         incomingCallData = { rid, ...data };
-        // 画面共有リクエストバナー（DMチャット内）
+        // バナー表示
         document.getElementById('incoming-name').textContent = data.callerName;
+        document.getElementById('incoming-type').textContent = data.type === 'voice' ? '📞 音声通話' : '🖥️ 画面共有のリクエスト';
+        document.getElementById('btn-answer-call').textContent = data.type === 'voice' ? '📞' : '👁️';
         document.getElementById('incoming-call-banner').style.display = 'flex';
-        // ブラウザのネイティブ通知（タブがアクティブでも表示）
-        pushNotif(
-          '🖥️ 画面共有のリクエスト',
-          `${data.callerName} が画面共有を始めたよ！`,
-          () => { incomingCallData && answerScreenShare(); },
-          true  // タブがアクティブでも強制表示
-        );
       });
     });
   }
 
-  // ─── 視聴者側：受け入れ ───────────────────────────────
-  window.answerScreenShare = async () => {
+  // ─── 応答（共通） ─────────────────────────────────────
+  window.answerIncoming = async () => {
     if (!incomingCallData) return;
     document.getElementById('incoming-call-banner').style.display = 'none';
-    const { rid, callerName } = incomingCallData;
+    const { rid, callerName, type } = incomingCallData;
+    callType = type;
     isCaller = false;
-
-    // 既存の接続をリセット（2人目問題の修正）
-    if (pc) await hangUp(true);
+    if (pc) await cleanupCall(true);
 
     pc = new RTCPeerConnection(ICE_SERVERS);
+    callDocRef = doc(db, 'calls', rid);
 
-    // 映像を受け取ったら表示
-    const remoteStream = new MediaStream();
-    const remoteVideo = document.getElementById('remote-video');
-    remoteVideo.srcObject = remoteStream;
-    pc.ontrack = e => {
-      remoteStream.addTrack(e.track);
-    };
-    // ICE接続が確立したら映像エリアへ切り替え
-    pc.oniceconnectionstatechange = () => {
-      devLog('ICE state: ' + pc.iceConnectionState);
-      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-        remoteVideo.play().catch(() => {});
-        document.getElementById('share-waiting').style.display = 'none';
-        document.getElementById('share-view').style.display = 'block';
-        document.getElementById('screen-share-banner').style.display = 'block';
-      }
-    };
-    // ontrack後にvideoが再生できた時点でも切り替え（バックアップ）
-    remoteVideo.oncanplay = () => {
-      if (document.getElementById('share-waiting').style.display !== 'none') {
-        document.getElementById('share-waiting').style.display = 'none';
-        document.getElementById('share-view').style.display = 'block';
-        document.getElementById('screen-share-banner').style.display = 'block';
-      }
-    };
+    if (type === 'screen') {
+      // 映像受信
+      const remoteStream = new MediaStream();
+      document.getElementById('remote-video').srcObject = remoteStream;
+      pc.ontrack = e => {
+        remoteStream.addTrack(e.track);
+        if (e.track.kind === 'video') {
+          document.getElementById('share-waiting').style.display = 'none';
+          document.getElementById('share-view').style.display = 'block';
+          document.getElementById('screen-share-banner').style.display = 'block';
+        }
+      };
+    } else {
+      // 音声受信
+      pc.ontrack = e => {
+        let audio = document.getElementById('remote-audio');
+        if (!audio) { audio = document.createElement('audio'); audio.id = 'remote-audio'; audio.autoplay = true; document.body.appendChild(audio); }
+        audio.srcObject = e.streams[0];
+      };
+      // 自分のマイクも送る
+      try {
+        localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        localAudioStream.getTracks().forEach(t => pc.addTrack(t, localAudioStream));
+      } catch(e) { alert('マイクへのアクセスが許可されていないよ'); }
+    }
 
     pc.onicecandidate = async e => {
       if (e.candidate) await addDoc(collection(db, 'calls', rid, 'answerCandidates'), e.candidate.toJSON());
     };
 
-    callDocRef = doc(db, 'calls', rid);
     const callData = (await getDoc(callDocRef)).data();
     await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
-
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     await updateDoc(callDocRef, { answer: { type: answer.type, sdp: answer.sdp }, status: 'connected' });
 
     onSnapshot(collection(db, 'calls', rid, 'callerCandidates'), snap => {
-      snap.docChanges().forEach(async change => {
-        if (change.type === 'added') { try { await pc.addIceCandidate(new RTCIceCandidate(change.doc.data())); } catch(e) {} }
+      snap.docChanges().forEach(async c => {
+        if (c.type === 'added') { try { await pc.addIceCandidate(new RTCIceCandidate(c.doc.data())); } catch(e) {} }
       });
     });
-
     callUnsub = onSnapshot(callDocRef, snap => {
       const data = snap.data();
       if (!data || data.status === 'ended') { hangUp(true); return; }
     });
 
-    // チャットパネル起動
-    startShareChat(rid);
-
-    // 視聴者用オーバーレイ
+    // UI表示
     document.getElementById('call-overlay').classList.add('active');
-    document.getElementById('share-waiting').style.display = 'flex';
-    document.getElementById('share-view').style.display = 'none';
-    document.getElementById('share-status-text').textContent = '映像を受信中…';
-    document.getElementById('share-peer-name').textContent = callerName + ' の画面';
+    if (type === 'screen') {
+      document.getElementById('share-waiting').style.display = 'flex';
+      document.getElementById('share-view').style.display = 'none';
+      document.getElementById('share-controls').style.display = 'flex';
+      document.getElementById('voice-area').style.display = 'none';
+      document.getElementById('share-status-text').textContent = '映像を受信中…';
+      document.getElementById('share-peer-name').textContent = callerName + ' の画面';
+    } else {
+      showVoiceUI('通話中', callerName);
+      startVoiceTimer();
+    }
     incomingCallData = null;
-    devLog('画面共有に接続: ' + callerName);
+    devLog('通話に応答: ' + type);
   };
 
   // ─── 拒否 ────────────────────────────────────────────
-  window.declineScreenShare = async () => {
-    if (!incomingCallData) { document.getElementById('incoming-call-banner').style.display = 'none'; return; }
+  window.declineIncoming = async () => {
+    document.getElementById('incoming-call-banner').style.display = 'none';
+    if (!incomingCallData) return;
     try { await updateDoc(doc(db, 'calls', incomingCallData.rid), { status: 'declined' }); } catch(e) {}
     incomingCallData = null;
-    document.getElementById('incoming-call-banner').style.display = 'none';
   };
 
-  // ─── 終了 ────────────────────────────────────────────
-  window.hangUp = async (silent = false, msg = null) => {
-    if (callUnsub) { callUnsub(); callUnsub = null; }
-    if (pc) { pc.close(); pc = null; }
-    if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
-    document.getElementById('remote-video').srcObject = null;
-    document.getElementById('call-overlay').classList.remove('active');
+  // ─── 音声通話UI ───────────────────────────────────────
+  function showVoiceUI(status, peerName) {
+    document.getElementById('call-overlay').classList.add('active');
     document.getElementById('share-waiting').style.display = 'none';
     document.getElementById('share-view').style.display = 'none';
-    document.getElementById('screen-share-banner').style.display = 'none';
-    // チャットパネルのリスナーも解除
-    if (window._shareChatUnsub) { window._shareChatUnsub(); window._shareChatUnsub = null; }
-    document.getElementById('share-chat-messages').innerHTML = '';
-    if (!silent && callDocRef) {
-      try { await updateDoc(callDocRef, { status: 'ended' }); } catch(e) {}
-    }
-    callDocRef = null;
-    isCaller = false;
-    if (msg) setTimeout(() => alert(msg), 100);
-    devLog('画面共有終了');
-  };
-
-  // ─── 画面共有中チャットパネル ─────────────────────────
-  function startShareChat(roomId) {
-    if (window._shareChatUnsub) { window._shareChatUnsub(); window._shareChatUnsub = null; }
-    document.getElementById('share-chat-messages').innerHTML = '';
-    window._shareChatUnsub = onSnapshot(
-      query(collection(db, 'rooms', roomId, 'shareMessages'), orderBy('createdAt', 'asc')),
-      snap => {
-        const box = document.getElementById('share-chat-messages');
-        const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
-        snap.docChanges().forEach(change => {
-          if (change.type !== 'added') return;
-          const m = change.doc.data();
-          const isMe = m.senderId === curUser.uid;
-          const div = document.createElement('div');
-          div.className = isMe ? 'share-msg-me' : 'share-msg-other';
-          const safeText = m.text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-          div.innerHTML = `<div class="share-msg-name">${isMe ? 'あなた' : m.senderName}</div>${safeText}`;
-          box.appendChild(div);
-        });
-        if (wasAtBottom) box.scrollTop = box.scrollHeight;
-      }
-    );
+    document.getElementById('share-controls').style.display = 'none';
+    document.getElementById('voice-area').style.display = 'flex';
+    document.getElementById('voice-status').textContent = status;
+    document.getElementById('voice-peer-name').textContent = peerName;
   }
 
-  window.sendShareChatMsg = async () => {
-    const inp = document.getElementById('share-chat-input');
-    const text = inp.value.trim();
-    if (!text || !curRoom) return;
-    inp.value = '';
-    await addDoc(collection(db, 'rooms', curRoom, 'shareMessages'), {
-      text, senderId: curUser.uid, senderName: curUser.displayName, createdAt: serverTimestamp()
-    });
+  function startVoiceTimer() {
+    document.getElementById('voice-timer').style.display = 'block';
+    let sec = 0;
+    voiceTimerInterval = setInterval(() => {
+      sec++;
+      const m = Math.floor(sec / 60), s = sec % 60;
+      document.getElementById('voice-timer').textContent = `${m}:${String(s).padStart(2,'0')}`;
+    }, 1000);
+  }
+
+  window.toggleMute = () => {
+    if (!localAudioStream) return;
+    isMuted = !isMuted;
+    localAudioStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+    const btn = document.getElementById('btn-mute');
+    btn.textContent = isMuted ? '🔇' : '🎤';
+    btn.innerHTML = (isMuted ? '🔇' : '🎤') + '<span>' + (isMuted ? 'ON' : 'ミュート') + '</span>';
+    btn.classList.toggle('muted', isMuted);
   };
 
-  document.getElementById('share-chat-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendShareChatMsg(); }
-  });
+  window.toggleSpeaker = () => {
+    isSpeakerOff = !isSpeakerOff;
+    const audio = document.getElementById('remote-audio');
+    if (audio) audio.muted = isSpeakerOff;
+    const btn = document.getElementById('btn-speaker');
+    btn.textContent = isSpeakerOff ? '🔇' : '🔊';
+    btn.innerHTML = (isSpeakerOff ? '🔇' : '🔊') + '<span>' + (isSpeakerOff ? 'OFF' : 'スピーカー') + '</span>';
+    btn.classList.toggle('muted', isSpeakerOff);
+  };
 
   window.copyUrl = (url) => {
     navigator.clipboard.writeText(url).then(() => {
