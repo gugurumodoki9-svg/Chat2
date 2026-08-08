@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Super Chat</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
@@ -310,6 +311,84 @@
     .dev-report-row .rep-name { color: #f87171; font-weight: bold; }
     .dev-report-row .rep-text { color: #ccc; margin-top: 4px; }
     .dev-report-row .rep-time { color: #666; font-size: 11px; margin-top: 4px; }
+
+    /* ── レスポンシブ（スマホ・タブレット） ── */
+    /* サイドバーを下部タブバーに切り替え */
+    @media (max-width: 768px) {
+      :root { --side-width: 100%; }
+
+      body { flex-direction: column; }
+
+      #main-app { flex-direction: column; }
+
+      /* サイドバー → 上部ヘッダー風に */
+      .sidebar {
+        width: 100%; height: auto; border-right: none;
+        border-bottom: 1px solid #ddd; flex-direction: column;
+        position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        height: 100%;
+        max-width: 80vw;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+      }
+      .sidebar.open { transform: translateX(0); }
+
+      /* サイドバーオーバーレイ */
+      #sidebar-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.4); z-index: 99;
+      }
+      #sidebar-overlay.open { display: block; }
+
+      /* モバイルトップバー */
+      #mobile-topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        background: white; padding: 10px 14px; border-bottom: 1px solid #ddd;
+        position: fixed; top: 0; left: 0; right: 0; z-index: 98; height: 52px;
+      }
+      #mobile-topbar .mob-title {
+        font-weight: bold; font-size: 15px; color: #333;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin: 0 10px;
+      }
+      .mob-menu-btn {
+        background: none; border: none; font-size: 22px; cursor: pointer; padding: 4px; flex-shrink: 0;
+      }
+
+      /* チャットエリアを全画面に、topbarの高さ分ずらす */
+      .chat-area {
+        margin-top: 52px;
+        height: calc(100vh - 52px);
+      }
+
+      /* メッセージ吹き出しの最大幅を広げる */
+      .msg-wrapper { max-width: 88%; }
+
+      /* 入力エリアのフォントサイズ（iOS zoom防止） */
+      #msg-input { font-size: 16px !important; }
+
+      /* パネル系 */
+      .full-panel { z-index: 10001; }
+
+      /* 画面共有・音声通話ボタンをコンパクトに */
+      #call-btn-screen, #call-btn-voice {
+        font-size: 11px; padding: 5px 10px;
+      }
+
+      /* 音声通話UIをモバイル対応 */
+      .voice-controls { gap: 30px; }
+      .voice-btn { width: 70px; height: 70px; font-size: 28px; }
+      .voice-btn.red { width: 80px; height: 80px; }
+    }
+
+    @media (max-width: 480px) {
+      .msg-wrapper { max-width: 92%; }
+      #mobile-topbar { padding: 8px 10px; }
+    }
+
+    /* デスクトップではモバイル要素を隠す */
+    #mobile-topbar { display: none; }
+    #sidebar-overlay { display: none; }
   </style>
 </head>
 <body>
@@ -369,6 +448,15 @@
 </div>
 
 <!-- メインアプリ -->
+<!-- モバイルオーバーレイ -->
+<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+<!-- モバイルトップバー -->
+<div id="mobile-topbar">
+  <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
+  <div class="mob-title" id="mobile-title">💬 Super Chat</div>
+  <div id="mobile-call-btns" style="display:flex;gap:6px;"></div>
+</div>
+
 <div id="main-app">
   <div id="action-menu">
     <button id="act-reply" class="btn-modern btn-primary">↩️ 返信</button>
@@ -486,6 +574,19 @@
       <h4>🖼️ 背景画像をPCからアップロード</h4>
       <label class="btn-modern btn-primary" style="display:inline-block; cursor:pointer;">画像を選択する<input type="file" id="bg-upload" hidden accept="image/*"></label>
       <button onclick="resetBg()" class="btn-modern" style="background:#eee; margin-left:10px;">リセット</button>
+    </div>
+    <div class="card" id="test-icon-card" style="display:none;">
+        <h4 style="margin:0 0 12px;">🖼️ アイコン変更</h4>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+          <img id="test-icon-preview" src="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;background:#eee;border:2px solid #ddd;">
+          <div style="flex:1;">
+            <label class="btn-modern btn-primary" style="display:inline-block;cursor:pointer;font-size:13px;">
+              📷 画像を選ぶ<input type="file" id="test-icon-upload" hidden accept="image/*">
+            </label>
+            <button onclick="removeTestIcon()" class="btn-modern" style="background:#eee;font-size:13px;margin-left:6px;">削除</button>
+          </div>
+        </div>
+        <button onclick="saveTestIcon()" class="btn-modern btn-primary" style="width:100%;">保存する</button>
     </div>
     <div class="card"><button onclick="doLogout()" class="btn-modern btn-danger" style="width:100%;">ログアウト</button></div>
   </div>
@@ -854,12 +955,24 @@
 
   function startTestSession(session) {
     isTestUser = true;
-    curUser = { uid: session.uid, displayName: `🧪 ${session.name}`, photoURL: '' };
+    const savedIcon = localStorage.getItem(`testIcon_${session.id}`) || '';
+    curUser = { uid: session.uid, displayName: `🧪 ${session.name}`, photoURL: savedIcon };
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-app').style.display = 'flex';
     document.getElementById('my-name').innerText = `🧪 ${session.name}`;
-    document.getElementById('my-icon').src = '';
+    document.getElementById('my-icon').src = savedIcon;
     document.getElementById('my-test-label').style.display = 'block';
+    // 設定パネルのアイコンカードを表示
+    document.getElementById('test-icon-card').style.display = 'block';
+    const preview = document.getElementById('test-icon-preview');
+    if (preview) preview.src = savedIcon;
+    // アイコンアップロードイベント
+    document.getElementById('test-icon-upload').onchange = e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => { if (preview) preview.src = ev.target.result; };
+      reader.readAsDataURL(file);
+    };
 
     // テスト垢はデフォルトで送信可能にする（lockedを明示解除）
     document.getElementById('input-container').classList.remove('locked');
@@ -886,6 +999,27 @@
 
     initApp();
   }
+
+  // テストアカウントのアイコン保存
+  window.saveTestIcon = async () => {
+    const preview = document.getElementById('test-icon-preview');
+    if (!preview || !preview.src || preview.src === window.location.href) return;
+    const session = JSON.parse(localStorage.getItem('testSession') || '{}');
+    if (!session.id) return;
+    const iconData = preview.src;
+    localStorage.setItem(`testIcon_${session.id}`, iconData);
+    // Firestoreのusersドキュメントも更新
+    try { await updateDoc(doc(db, 'users', `test_${session.id}`), { icon: iconData }); } catch(e) {}
+    curUser.photoURL = iconData;
+    document.getElementById('my-icon').src = iconData;
+    alert('アイコンを保存したよ！');
+    closePanel('settings-panel');
+  };
+  window.removeTestIcon = () => {
+    const preview = document.getElementById('test-icon-preview');
+    if (preview) preview.src = '';
+    document.getElementById('test-icon-upload').value = '';
+  };
 
   window.doLogout = async () => {
     if (isTestUser) { localStorage.removeItem('testSession'); localStorage.removeItem('userSession'); }
@@ -1382,6 +1516,25 @@
   window.openPanel = id => { document.getElementById(id).style.display = 'flex'; renderNotifStatus(); };
   window.closePanel = id => document.getElementById(id).style.display = 'none';
   window.auth = auth;
+
+  // ── モバイル：サイドバー開閉 ──────────────────────────
+  window.toggleSidebar = () => {
+    document.querySelector('.sidebar').classList.toggle('open');
+    document.getElementById('sidebar-overlay').classList.toggle('open');
+  };
+  window.closeSidebar = () => {
+    document.querySelector('.sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  };
+
+  // チャットを開くときにモバイルタイトルも更新＆サイドバー閉じる
+  const _origOpenChat = window.openChat;
+  window.openChat = (rid, title) => {
+    _origOpenChat(rid, title);
+    const mob = document.getElementById('mobile-title');
+    if (mob) mob.textContent = title;
+    closeSidebar();
+  };
 
   // ─── URLまとめ ──────────────────────────────────────────
   let allUrlDocs = [];   // 全件キャッシュ
