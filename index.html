@@ -858,8 +858,18 @@
 
   window.deleteTestAccount = async tid => {
     if (!confirm(`テストアカウント「${tid}」を削除する？`)) return;
-    await deleteDoc(doc(db, "testAccounts", tid));
-    await deleteDoc(doc(db, "users", `test_${tid}`));
+    try {
+      await deleteDoc(doc(db, "testAccounts", tid));
+      const userDocId = tid.startsWith('test_') ? tid : `test_${tid}`;
+      const userRef = doc(db, "users", userDocId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) await deleteDoc(userRef);
+      devLog(`テストアカウント削除: ${tid}`);
+      alert(`「${tid}」を削除したよ！`);
+    } catch(e) {
+      console.error(e);
+      alert(`削除に失敗したよ: ${e.message}`);
+    }
   };
 
   // ─── タブ切り替え ────────────────────────────────────
