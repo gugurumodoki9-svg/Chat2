@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Super Chat</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
@@ -482,7 +482,7 @@
     <h1 style="margin-top:0; color:#333;">Super Chat</h1>
     <p style="color:#666; margin-bottom:20px;">自分たちだけの安全なチャットルーム</p>
     <button onclick="loginWithGoogle()" class="login-btn">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="18">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="18" alt="Google">
       Googleでログイン
     </button>
 
@@ -544,7 +544,7 @@
   <div class="sidebar" style="display:flex;">
     <div class="sidebar-header">
       <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-        <img id="my-icon" class="user-icon" src="">
+        <img id="my-icon" class="user-icon" src="" alt="アイコン">
         <div>
           <div id="my-name" style="font-weight:bold; font-size:14px;">Loading...</div>
           <div id="my-test-label" style="display:none; font-size:11px; color:#7c3aed;">🧪 テストアカウント</div>
@@ -636,8 +636,6 @@
   </div>
 </div>
 
-</div>
-
 
 <div id="settings-panel" class="full-panel">
   <div class="panel-header"><h3>⚙️ 設定</h3><button onclick="closePanel('settings-panel')" class="btn-modern">閉じる</button></div>
@@ -655,7 +653,7 @@
     <div class="card" id="test-icon-card" style="display:none;">
         <h4 style="margin:0 0 12px;">🖼️ アイコン変更</h4>
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
-          <img id="test-icon-preview" src="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;background:#eee;border:2px solid #ddd;">
+          <img id="test-icon-preview" src="" alt="アイコンプレビュー" style="width:56px;height:56px;border-radius:50%;object-fit:cover;background:#eee;border:2px solid #ddd;">
           <div style="flex:1;">
             <label class="btn-modern btn-primary" style="display:inline-block;cursor:pointer;font-size:13px;">
               📷 画像を選ぶ<input type="file" id="test-icon-upload" hidden accept="image/*">
