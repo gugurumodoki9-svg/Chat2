@@ -380,12 +380,22 @@
         display: flex; flex-direction: column;
         height: auto !important;
         margin: 0 !important;
-        -webkit-overflow-scrolling: touch;
+        overflow: hidden;
       }
-      /* chat-contentが非表示でも親がタッチ吸収しないように */
-      #chat-content[style*="display:none"],
-      #chat-content[style*="display: none"] {
-        pointer-events: none;
+      /* chat-contentをflexで伸ばす */
+      #chat-content {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+      /* messagesを伸縮させる */
+      #messages {
+        flex: 1;
+        min-height: 0;
+      }
+      /* input-containerを下に固定 */
+      #input-container {
+        flex-shrink: 0 !important;
       }
 
       /* メッセージリスト */
@@ -450,19 +460,33 @@
       #mobile-topbar { height: 46px; }
       .chat-area { top: 46px; }
 
+      #chat-content {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+        overflow: hidden !important;
+      }
+      #messages {
+        flex: 1 !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+      }
+      #input-container {
+        flex-shrink: 0 !important;
+        padding: 6px 8px !important;
+        padding-bottom: max(6px, env(safe-area-inset-bottom)) !important;
+        background: white !important;
+        border-top: 1px solid #ddd !important;
+      }
+
       .msg-wrapper { max-width: 93%; }
       .msg-info-inner { flex-direction: column; gap: 0; }
       .msg-datetime { color: #aaa; }
-
-      #input-container { padding: 6px 8px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
       #send-btn { padding: 9px 13px; font-size: 13px; }
 
-      /* 管理・設定パネル内のボタン */
       .btn-modern { padding: 7px 10px; font-size: 12px; }
       .user-card { flex-wrap: wrap; gap: 8px; }
       .user-card-actions { width: 100%; justify-content: flex-end; }
-
-      /* サイドバーヘッダーをコンパクトに */
       .sidebar-header { padding: 10px; }
       #admin-login-area input, #dev-login-area input { font-size: 14px; padding: 7px; }
     }
@@ -570,7 +594,7 @@
   </div>
 
   <div class="chat-area" id="chat-bg-layer">
-    <div id="chat-content" style="display:none; flex-direction:column; height:100%;">
+    <div id="chat-content" style="display:none; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
       <div style="padding:10px 20px; background:rgba(255,255,255,0.8); border-bottom:1px solid #ddd; font-weight:bold; display:flex; align-items:center; justify-content:space-between;">
         <span>📍 <span id="chat-title"></span></span>
         <button id="call-btn-screen" onclick="startScreenShare()" style="display:none; background:#0084ff; color:white; border:none; border-radius:20px; padding:6px 14px; font-size:13px; font-weight:bold; cursor:pointer; margin-right:6px;">🖥️ 画面共有</button>
@@ -1044,8 +1068,14 @@
     const savedIcon = localStorage.getItem(`testIcon_${session.id}`) || '';
     curUser = { uid: session.uid, displayName: `🧪 ${session.name}`, photoURL: savedIcon };
     const ls = document.getElementById('login-screen');
-    ls.classList.add('hidden'); ls.style.display = '';
-    document.getElementById('main-app').style.display = 'flex';
+    ls.classList.add('hidden');
+    ls.style.display = 'none';
+    ls.style.pointerEvents = 'none';
+    ls.style.visibility = 'hidden';
+    const mainApp = document.getElementById('main-app');
+    mainApp.style.display = 'flex';
+    // 強制レイアウト再計算（スマホでタッチ無反応になる対策）
+    mainApp.getBoundingClientRect();
     document.getElementById('my-name').innerText = `🧪 ${session.name}`;
     document.getElementById('my-icon').src = savedIcon;
     document.getElementById('my-test-label').style.display = 'block';
@@ -1122,9 +1152,11 @@
   const savedUserSession = localStorage.getItem('userSession');
   if (savedUserSession) { startUserSession(JSON.parse(savedUserSession)); }
 
-  // テストセッション復元
+  // テストセッション復元（タイミング保証）
   const savedSession = localStorage.getItem('testSession');
-  if (savedSession && !savedUserSession) startTestSession(JSON.parse(savedSession));
+  if (savedSession && !savedUserSession) {
+    setTimeout(() => startTestSession(JSON.parse(savedSession)), 50);
+  }
 
   onAuthStateChanged(auth, async user => {
     if (isTestUser) return;
@@ -1246,7 +1278,12 @@
     refreshSidebarItem(rid);
     updateTabTitle();
     document.getElementById('chat-title').innerText = title;
-    document.getElementById('chat-content').style.display = 'flex';
+    const cc = document.getElementById('chat-content');
+    cc.style.display = 'flex';
+    cc.style.flexDirection = 'column';
+    cc.style.flex = '1';
+    cc.style.minHeight = '0';
+    cc.style.overflow = 'hidden';
     // グローバルチャット以外では通話ボタンを表示
     document.getElementById('call-btn-screen').style.display = 'inline-block';
       document.getElementById('call-btn-voice').style.display = 'inline-block';
