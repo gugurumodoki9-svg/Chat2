@@ -21,8 +21,8 @@
       background: linear-gradient(135deg, #0084ff 0%, #00c6ff 100%);
       display: flex; align-items: center; justify-content: center; z-index: 10000;
     }
-    #login-screen[style*="display: none"],
-    #login-screen[style*="display:none"] {
+    #login-screen.hidden {
+      display: none !important;
       pointer-events: none !important;
       visibility: hidden !important;
     }
@@ -380,6 +380,12 @@
         display: flex; flex-direction: column;
         height: auto !important;
         margin: 0 !important;
+        -webkit-overflow-scrolling: touch;
+      }
+      /* chat-contentが非表示でも親がタッチ吸収しないように */
+      #chat-content[style*="display:none"],
+      #chat-content[style*="display: none"] {
+        pointer-events: none;
       }
 
       /* メッセージリスト */
@@ -520,10 +526,10 @@
 
 <!-- メインアプリ -->
 <!-- モバイルオーバーレイ -->
-<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+<div id="sidebar-overlay" onclick="closeSidebar()" ontouchstart="closeSidebar()"></div>
 <!-- モバイルトップバー -->
 <div id="mobile-topbar">
-  <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
+  <button class="mob-menu-btn" onclick="toggleSidebar()" ontouchstart="">☰</button>
   <div class="mob-title" id="mobile-title">💬 Super Chat</div>
   <div id="mobile-call-btns" style="display:flex;gap:6px;"></div>
 </div>
@@ -997,7 +1003,7 @@
     isTestUser = true; // テストと同じ仕組みを流用
     curUser = { uid: session.uid, displayName: session.name, photoURL: '' };
     const ls = document.getElementById('login-screen');
-    ls.style.display = 'none'; ls.style.pointerEvents = 'none'; ls.style.visibility = 'hidden';
+    ls.classList.add('hidden'); ls.style.display = '';
     document.getElementById('main-app').style.display = 'flex';
     document.getElementById('my-name').innerText = session.name;
     document.getElementById('my-icon').src = '';
@@ -1040,7 +1046,7 @@
     const savedIcon = localStorage.getItem(`testIcon_${session.id}`) || '';
     curUser = { uid: session.uid, displayName: `🧪 ${session.name}`, photoURL: savedIcon };
     const ls = document.getElementById('login-screen');
-    ls.style.display = 'none'; ls.style.pointerEvents = 'none'; ls.style.visibility = 'hidden';
+    ls.classList.add('hidden'); ls.style.display = '';
     document.getElementById('main-app').style.display = 'flex';
     document.getElementById('my-name').innerText = `🧪 ${session.name}`;
     document.getElementById('my-icon').src = savedIcon;
@@ -1127,7 +1133,7 @@
     if (user) {
       curUser = user;
       const lsAuth = document.getElementById('login-screen');
-      lsAuth.style.display = 'none'; lsAuth.style.pointerEvents = 'none'; lsAuth.style.visibility = 'hidden';
+      lsAuth.classList.add('hidden'); lsAuth.style.display = '';
       document.getElementById('main-app').style.display = 'flex';
       document.getElementById('my-name').innerText = user.displayName;
       document.getElementById('my-icon').src = user.photoURL;
@@ -1146,7 +1152,7 @@
       if (localStorage.getItem('isAdmin') === 'true') showAdminUI();
       if (localStorage.getItem('isDev') === 'true') showDevUI();
     } else {
-      if (!isTestUser) { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('main-app').style.display = 'none'; }
+      if (!isTestUser) { const lsShow = document.getElementById('login-screen'); lsShow.classList.remove('hidden'); lsShow.style.display = ''; document.getElementById('main-app').style.display = 'none'; }
     }
   });
 
@@ -1165,7 +1171,7 @@
       });
 
       // 全員チャット
-      let html = `<div class="user-item ${curRoom==='global'?'active':''}" data-room="global" onclick="openChat('global','🌐 全員チャット')">
+      let html = `<div class="user-item ${curRoom==='global'?'active':''}" data-room="global" onclick="openChat('global','🌐 全員チャット')" ontouchstart="">
         <span style="font-size:20px;">🌐</span>
         <span class="room-name">全員チャット</span>
         <div class="badge-area"></div>
@@ -1176,7 +1182,7 @@
         html += `<div style="padding:4px 12px; font-size:10px; color:#999; background:#f9f0ff; border-bottom:1px solid #ede0ff; letter-spacing:0.05em;">🧪 テストアカウント</div>`;
         testUsers.forEach(({ d, u }) => {
           const rid = [curUser.uid, d.id].sort().join('_');
-          html += `<div class="user-item ${curRoom===rid?'active':''}" data-room="${rid}" onclick="openChat('${rid}','${u.name}')" style="background:#fdf8ff; border-left-color:#c4a0f0;">
+          html += `<div class="user-item ${curRoom===rid?'active':''}" data-room="${rid}" onclick="openChat('${rid}','${u.name}')" ontouchstart="" style="background:#fdf8ff; border-left-color:#c4a0f0;">
             <span style="font-size:18px;">🧪</span>
             <span class="room-name" style="color:#7c3aed; font-size:13px;">${u.name}</span>
             <div class="badge-area"></div>
@@ -1189,7 +1195,7 @@
       // 通常ユーザー
       normalUsers.forEach(({ d, u }) => {
         const rid = [curUser.uid, d.id].sort().join('_');
-        html += `<div class="user-item ${curRoom===rid?'active':''}" data-room="${rid}" onclick="openChat('${rid}','${u.name}')">
+        html += `<div class="user-item ${curRoom===rid?'active':''}" data-room="${rid}" onclick="openChat('${rid}','${u.name}')" ontouchstart="">
           ${u.icon ? `<img src="${u.icon}" class="user-icon" style="width:28px;height:28px;">` : `<span style="font-size:20px;">👤</span>`}
           <span class="room-name">${u.name}</span>
           <div class="badge-area"></div>
@@ -1603,12 +1609,19 @@
 
   // ── モバイル：サイドバー開閉 ──────────────────────────
   window.toggleSidebar = () => {
-    document.querySelector('.sidebar').classList.toggle('open');
-    document.getElementById('sidebar-overlay').classList.toggle('open');
+    const sb = document.querySelector('.sidebar');
+    const ov = document.getElementById('sidebar-overlay');
+    const opening = !sb.classList.contains('open');
+    sb.classList.toggle('open');
+    // overlayはdisplayも直接制御（CSS classだけだとSafariで効かない場合がある）
+    ov.style.display = opening ? 'block' : 'none';
+    ov.classList.toggle('open', opening);
   };
   window.closeSidebar = () => {
     document.querySelector('.sidebar').classList.remove('open');
-    document.getElementById('sidebar-overlay').classList.remove('open');
+    const ov = document.getElementById('sidebar-overlay');
+    ov.style.display = 'none';
+    ov.classList.remove('open');
   };
 
   // チャットを開くときにモバイルタイトルも更新＆サイドバー閉じる
