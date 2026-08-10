@@ -319,81 +319,147 @@
 
     /* ── レスポンシブ（スマホ・タブレット） ── */
     /* サイドバーを下部タブバーに切り替え */
+    /* ── デスクトップではモバイル要素を隠す ── */
+    #mobile-topbar { display: none; }
+    #sidebar-overlay { display: none; }
+
+    /* ── モバイル・タブレット共通（768px以下） ── */
     @media (max-width: 768px) {
-      :root { --side-width: 100%; }
+      body { flex-direction: column; overflow: hidden; }
+      #main-app { flex-direction: column; overflow: hidden; }
 
-      body { flex-direction: column; }
-
-      #main-app { flex-direction: column; }
-
-      /* サイドバー → 上部ヘッダー風に */
+      /* サイドバー：左からスライドするドロワー */
       .sidebar {
-        width: 100%; height: auto; border-right: none;
-        border-bottom: 1px solid #ddd; flex-direction: column;
-        position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-        transform: translateX(-100%);
-        transition: transform 0.25s ease;
+        position: fixed; top: 0; left: 0; bottom: 0;
+        width: min(85vw, 300px);
         height: 100%;
-        max-width: 80vw;
-        box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+        border-right: 1px solid #ddd;
+        flex-direction: column;
+        z-index: 200;
+        transform: translateX(-105%);
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.2);
+        overflow-y: auto;
       }
       .sidebar.open { transform: translateX(0); }
 
-      /* サイドバーオーバーレイ */
+      /* オーバーレイ */
       #sidebar-overlay {
         display: none; position: fixed; inset: 0;
-        background: rgba(0,0,0,0.4); z-index: 99;
+        background: rgba(0,0,0,0.45); z-index: 199;
+        backdrop-filter: blur(1px);
       }
       #sidebar-overlay.open { display: block; }
 
       /* モバイルトップバー */
       #mobile-topbar {
-        display: flex; align-items: center; justify-content: space-between;
-        background: white; padding: 10px 14px; border-bottom: 1px solid #ddd;
-        position: fixed; top: 0; left: 0; right: 0; z-index: 98; height: 52px;
+        display: flex; align-items: center;
+        background: white; padding: 0 12px;
+        border-bottom: 1px solid #eee;
+        position: fixed; top: 0; left: 0; right: 0;
+        z-index: 198; height: 50px; flex-shrink: 0;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
       }
       #mobile-topbar .mob-title {
-        font-weight: bold; font-size: 15px; color: #333;
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin: 0 10px;
+        font-weight: bold; font-size: 14px; color: #222;
+        overflow: hidden; text-overflow: ellipsis;
+        white-space: nowrap; flex: 1; margin: 0 8px;
       }
       .mob-menu-btn {
-        background: none; border: none; font-size: 22px; cursor: pointer; padding: 4px; flex-shrink: 0;
+        background: none; border: none; font-size: 24px;
+        cursor: pointer; padding: 6px; flex-shrink: 0;
+        line-height: 1; -webkit-tap-highlight-color: transparent;
       }
+      #mobile-call-btns { display: flex; gap: 4px; flex-shrink: 0; }
+      #mobile-call-btns button { font-size: 11px; padding: 4px 9px; }
 
-      /* チャットエリアを全画面に、topbarの高さ分ずらす */
+      /* チャットエリア：topbar分ずらしてキーボード対応 */
       .chat-area {
-        margin-top: 52px;
-        height: calc(100vh - 52px);
+        position: fixed;
+        top: 50px; left: 0; right: 0; bottom: 0;
+        display: flex; flex-direction: column;
+        height: auto !important;
+        margin: 0 !important;
       }
 
-      /* メッセージ吹き出しの最大幅を広げる */
-      .msg-wrapper { max-width: 88%; }
+      /* メッセージリスト */
+      #messages {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 12px 10px;
+        padding-bottom: 8px;
+      }
 
-      /* 入力エリアのフォントサイズ（iOS zoom防止） */
-      #msg-input { font-size: 16px !important; }
+      /* 吹き出し */
+      .msg-wrapper { max-width: 90%; }
+      .msg-info-inner { font-size: 9px; }
 
-      /* パネル系 */
+      /* 入力エリア：画面下部に固定 */
+      #input-container {
+        flex-shrink: 0;
+        padding: 8px 10px;
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+      }
+      #msg-input {
+        font-size: 16px !important; /* iOS自動ズーム防止 */
+        padding: 10px 12px;
+        border-radius: 18px;
+      }
+
+      /* 送信ボタン・ファイルボタン */
+      #send-btn { padding: 10px 16px; font-size: 14px; }
+      #img-upload + *, label[for="img-upload"] { font-size: 18px; }
+
+      /* 返信プレビュー */
+      #reply-preview { font-size: 11px; }
+
+      /* 各種パネル */
       .full-panel { z-index: 10001; }
+      .panel-header h3 { font-size: 15px; }
+      .card { padding: 12px; }
 
-      /* 画面共有・音声通話ボタンをコンパクトに */
+      /* チャットヘッダー（ルーム名） */
+      #chat-content > div:first-child {
+        padding: 8px 14px;
+        font-size: 13px;
+      }
       #call-btn-screen, #call-btn-voice {
-        font-size: 11px; padding: 5px 10px;
+        font-size: 11px; padding: 4px 9px;
       }
 
-      /* 音声通話UIをモバイル対応 */
-      .voice-controls { gap: 30px; }
-      .voice-btn { width: 70px; height: 70px; font-size: 28px; }
-      .voice-btn.red { width: 80px; height: 80px; }
+      /* 音声通話UI */
+      .voice-controls { gap: 28px; }
+      .voice-btn { width: 64px; height: 64px; font-size: 26px; }
+      .voice-btn.red { width: 76px; height: 76px; }
+
+      /* 画面共有オーバーレイ */
+      #share-controls { padding: 10px 14px; }
     }
 
+    /* ── スマホ縦画面（480px以下） ── */
     @media (max-width: 480px) {
-      .msg-wrapper { max-width: 92%; }
-      #mobile-topbar { padding: 8px 10px; }
-    }
+      .sidebar { width: min(88vw, 280px); }
 
-    /* デスクトップではモバイル要素を隠す */
-    #mobile-topbar { display: none; }
-    #sidebar-overlay { display: none; }
+      #mobile-topbar { height: 46px; }
+      .chat-area { top: 46px; }
+
+      .msg-wrapper { max-width: 93%; }
+      .msg-info-inner { flex-direction: column; gap: 0; }
+      .msg-datetime { color: #aaa; }
+
+      #input-container { padding: 6px 8px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+      #send-btn { padding: 9px 13px; font-size: 13px; }
+
+      /* 管理・設定パネル内のボタン */
+      .btn-modern { padding: 7px 10px; font-size: 12px; }
+      .user-card { flex-wrap: wrap; gap: 8px; }
+      .user-card-actions { width: 100%; justify-content: flex-end; }
+
+      /* サイドバーヘッダーをコンパクトに */
+      .sidebar-header { padding: 10px; }
+      #admin-login-area input, #dev-login-area input { font-size: 14px; padding: 7px; }
+    }
   </style>
 </head>
 <body>
@@ -1551,6 +1617,15 @@
     _origOpenChat(rid, title);
     const mob = document.getElementById('mobile-title');
     if (mob) mob.textContent = title;
+    // モバイルトップバーに通話ボタンを表示（DM時のみ）
+    const mobBtns = document.getElementById('mobile-call-btns');
+    if (mobBtns) {
+      const isDM = rid !== 'global';
+      mobBtns.innerHTML = isDM
+        ? `<button onclick="startScreenShare()" style="background:#e8f4ff;color:#0084ff;border:1px solid #c0d8f0;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:bold;cursor:pointer;">🖥️</button>
+           <button onclick="startVoiceCall()" style="background:#efffef;color:#22c55e;border:1px solid #b0e8b0;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:bold;cursor:pointer;">📞</button>`
+        : '';
+    }
     closeSidebar();
   };
 
